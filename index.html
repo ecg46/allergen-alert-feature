@@ -1,474 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Food Partner Order Form – Group Order</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8" />
+<title>Group Order Customers - Allergen Alerts (v2)</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f2f3f5; color: #222; }
 
-    body {
-      font-family: 'Helvetica Neue', Arial, sans-serif;
-      font-size: 13px;
-      color: #1a1a1a;
-      background: #fff;
-      padding: 32px 40px;
-      max-width: 960px;
-      margin: 0 auto;
-    }
+  /* Layout */
+  .app { display: flex; min-height: 100vh; }
 
-    /* ── Header ── */
-    .page-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 24px;
-    }
-    .page-header .meta p { margin-bottom: 2px; font-size: 13px; }
-    .page-header .meta strong { font-weight: 700; }
-    .logo {
-      font-size: 28px;
-      font-weight: 900;
-      color: #e53935;
-      letter-spacing: 1px;
-    }
+  /* Sidebar */
+  .sidebar { width: 230px; background: linear-gradient(180deg, rgb(255, 98, 77), rgb(238, 52, 109)); color: #fff; display: flex; flex-direction: column; }
+  .sidebar-header {
+    background: #3d4853;
+    padding: 18px 20px;
+    font-weight: 800;
+    font-size: 20px;
+    color: #ffffff;
+    letter-spacing: 1px;
+    border-bottom: 2px solid #ffffff;
+  }
+  .sidebar .block { padding: 16px 20px; }
+  .sidebar .add-btn { background: #fff; color: rgb(255, 98, 77); text-align: center; padding: 12px; font-weight: 700; letter-spacing: 1px; border-radius: 4px; cursor: pointer; }
+  .sidebar label { font-size: 11px; letter-spacing: 1px; opacity: .9; display: block; margin-bottom: 6px; font-weight: 600; }
+  .sidebar input, .sidebar select { width: 100%; padding: 8px 10px; border-radius: 4px; border: none; font-size: 13px; font-family: inherit; }
+  .sidebar .client { padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: 500; }
+  .sidebar .client:hover { background: rgba(0,0,0,0.12); }
+  .sidebar .client.active { background: rgba(0,0,0,0.25); font-weight: 700; }
+  .sidebar .sub-client { padding: 8px 20px 8px 34px; font-size: 13px; cursor: pointer; opacity: 0.9; }
+  .sidebar .page-item { padding: 8px 20px 8px 34px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .sidebar .page-item .play { width: 28px; height: 28px; background: rgba(255,255,255,0.2); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; }
 
-    h1.form-title {
-      font-size: 18px;
-      font-weight: 800;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-    .form-subtitle { font-size: 13px; color: #444; margin-bottom: 20px; line-height: 1.5; }
-    .form-subtitle a { color: #e53935; text-decoration: none; }
+  .main { flex: 1; display: flex; flex-direction: column; }
+  .topbar { background: #fff; display: flex; justify-content: flex-end; align-items: center; padding: 12px 24px; gap: 24px; border-bottom: 1px solid #eaeaea; font-size: 14px; }
+  .topbar a { color: #2a9d9f; text-decoration: none; }
+  .topbar .user { color: #444; }
+  .topbar .menu { font-weight: 700; cursor: pointer; }
 
-    /* ── Info grid ── */
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-    .info-block h4 {
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      margin-bottom: 8px;
-    }
-    .info-block p { margin-bottom: 3px; line-height: 1.5; }
-    .info-block strong { font-weight: 700; }
+  .tabs { background: #f2f3f5; padding: 12px 32px 0; display: flex; gap: 28px; font-size: 14px; }
+  .tabs .tab { padding: 10px 2px; color: #888; cursor: pointer; font-weight: 500; }
+  .tabs .tab.active { color: #222; border-bottom: 3px solid rgb(238, 52, 109); font-weight: 600; }
 
-    /* ── Section heading ── */
-    .section-heading {
-      font-size: 13px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: .4px;
-      margin-bottom: 12px;
-    }
+  .content { padding: 18px 32px 40px; }
+  .pager { font-weight: 600; margin-bottom: 12px; font-size: 15px; }
+  .pager span { cursor: pointer; }
+  .search { width: 100%; max-width: 560px; padding: 10px 12px; border: 1px solid #d8d8d8; border-radius: 4px; font-size: 14px; margin-bottom: 14px; font-family: inherit; }
 
-    /* ═══════════════════════════════════════
-       ALLERGEN ALERT BANNER  (highest priority)
-    ═══════════════════════════════════════ */
-    .banner-allergen {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      background: #fffbeb;
-      border: 1.5px solid #f59e0b;
-      border-left: 5px solid #f59e0b;
-      border-radius: 6px;
-      padding: 14px 16px;
-      margin-bottom: 10px;
-    }
-    .banner-allergen .banner-icon { font-size: 20px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
-    .banner-allergen .banner-body {}
-    .banner-allergen .banner-title {
-      font-size: 14px;
-      font-weight: 800;
-      color: #b45309;
-      margin-bottom: 4px;
-    }
-    .banner-allergen .banner-desc {
-      font-size: 12.5px;
-      color: #92400e;
-      line-height: 1.5;
-    }
+  table { width: 100%; border-collapse: collapse; background: transparent; font-size: 14px; }
+  thead th { text-align: left; font-size: 11px; letter-spacing: 1px; color: #333; padding: 10px 12px; border-bottom: 1px solid #ddd; font-weight: 700; }
+  tbody td { padding: 14px 12px; border-bottom: 1px solid #e7e7e7; vertical-align: middle; }
+  tbody tr:hover { background: #fafafa; }
 
-    /* ── Special Requests banner ── */
-    .banner-special {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      background: #fff5f5;
-      border: 1.5px solid #e53935;
-      border-left: 5px solid #e53935;
-      border-radius: 6px;
-      padding: 14px 16px;
-      margin-bottom: 28px;
-    }
-    .banner-special .banner-icon { font-size: 20px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
-    .banner-special .banner-body {}
-    .banner-special .banner-title {
-      font-size: 14px;
-      font-weight: 800;
-      color: #e53935;
-      margin-bottom: 4px;
-    }
-    .banner-special .banner-desc {
-      font-size: 12.5px;
-      color: #c62828;
-      line-height: 1.5;
-    }
+  .allergen-cell { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .pill { background: #fde8e5; color: #b8372a; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .pill.muted { background: #eee; color: #888; font-weight: 500; }
+  .edit-icon { cursor: pointer; color: #2a9d9f; padding: 4px; border-radius: 4px; display: inline-flex; flex-shrink: 0; }
+  .edit-icon:hover { background: #e6f4f4; }
 
-    /* ── Menu section ── */
-    .menu-section { margin-bottom: 36px; }
-    .menu-section h2 {
-      font-size: 17px;
-      font-weight: 800;
-      border-bottom: 2px solid #1a1a1a;
-      padding-bottom: 6px;
-      margin-bottom: 0;
-    }
+  /* Modal */
+  .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 10; }
+  .backdrop.open { display: flex; }
+  .modal { width: 780px; max-width: 95vw; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.2); }
+  .modal-header {
+    background: linear-gradient(90deg, rgb(255, 98, 77), rgb(238, 52, 109));
+    color: #fff; padding: 14px 22px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; display: flex; justify-content: space-between;
+    align-items: center; font-size: 14px;
+  }
+  .modal-header .close { cursor: pointer; font-weight: 400; font-size: 22px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+  .modal-header .close:hover { opacity: 0.8; }
+  .modal-body { padding: 26px 28px; }
+  .section-title { font-size: 13px; font-weight: 700; letter-spacing: 1px; color: #111; margin-bottom: 18px; text-transform: uppercase; }
+  .field-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; color: #222; text-transform: uppercase; }
+  .note { color: #444; font-size: 14px; line-height: 1.6; }
 
-    /* ── Item table ── */
-    .item-table { width: 100%; border-collapse: collapse; }
-    .item-table thead tr {
-      border-bottom: 1px solid #ddd;
-    }
-    .item-table thead th {
-      font-size: 11.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .3px;
-      color: #555;
-      padding: 10px 8px;
-      text-align: right;
-    }
-    .item-table thead th:first-child { text-align: left; }
+  .dropdown-wrap { position: relative; max-width: 420px; }
+  .dropdown { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; display: flex; justify-content: space-between; align-items: center; font-family: inherit; }
+  .dropdown:hover { border-color: #999; }
+  .dropdown-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; max-height: 240px; overflow: auto; box-shadow: 0 6px 20px rgba(0,0,0,.08); z-index: 5; display: none; }
+  .dropdown-list.open { display: block; }
+  .dropdown-list label { display: flex; align-items: center; gap: 10px; padding: 8px 12px; font-size: 14px; cursor: pointer; }
+  .dropdown-list label:hover { background: #f6f6f6; }
+  .dropdown-list input[type="checkbox"] { accent-color: rgb(238, 52, 109); width: 16px; height: 16px; }
 
-    .item-table tbody tr {
-      border-bottom: 1px solid #eee;
-    }
-    .item-row-main td { padding: 14px 8px 4px; vertical-align: top; }
-    .item-row-main td:not(:first-child) { text-align: right; white-space: nowrap; }
+  .selected-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; min-height: 10px; }
+  .selected-pill { background: #fde8e5; color: #b8372a; padding: 6px 10px 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+  .selected-pill .x { cursor: pointer; font-size: 16px; line-height: 1; opacity: .8; }
+  .selected-pill .x:hover { opacity: 1; }
 
-    .item-name { font-weight: 700; font-size: 14px; }
-    .item-desc { font-size: 12px; color: #555; margin-top: 2px; }
-    .item-allergens-text {
-      font-size: 11.5px;
-      font-style: italic;
-      color: #777;
-      margin-top: 3px;
-    }
+  .divider { height: 1px; background: #e5e5e5; margin: 22px 0; }
 
-    /* row for notes / special requests / allergen */
-    .item-row-details td {
-      padding: 0 8px 14px;
-    }
-
-    .vendor-notes {
-      font-size: 12px;
-      margin-bottom: 6px;
-    }
-    .vendor-notes strong { font-weight: 700; }
-
-    /* Special request block */
-    .special-request-block {
-      background: #fff5f5;
-      border-left: 3px solid #e53935;
-      padding: 6px 10px;
-      margin-bottom: 6px;
-      font-size: 12px;
-    }
-    .special-request-block .label {
-      font-weight: 700;
-      color: #e53935;
-      font-size: 11.5px;
-      margin-bottom: 2px;
-    }
-    .special-request-block .value {
-      color: #c62828;
-      font-size: 12px;
-    }
-
-    /* ════════════════════════════════
-       ITEM-LEVEL ALLERGEN ALERT BLOCK
-    ════════════════════════════════ */
-    .allergen-alert-block {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      background: #fffbeb;
-      border-left: 3px solid #f59e0b;
-      padding: 8px 12px;
-      margin-bottom: 6px;
-      border-radius: 0 4px 4px 0;
-    }
-    .allergen-alert-block .al-top {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .allergen-alert-block .al-icon { font-size: 13px; flex-shrink: 0; line-height: 1; }
-    .allergen-alert-block .al-pill {
-      display: inline-block;
-      background: #f59e0b;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: .3px;
-      padding: 3px 9px;
-      border-radius: 3px;
-    }
-    /* Sub-note inside the banner */
-    .allergen-alert-block .al-sub {
-      font-size: 11.5px;
-      font-weight: 600;
-      padding-left: 19px; /* align with pill text */
-      color: #b45309;     /* orange – substitute variant */
-    }
-    .allergen-alert-block .al-sub.cancel {
-      color: #dc2626;     /* red – cancel variant */
-    }
-
-    /* ── Totals ── */
-    .totals-row td { padding: 4px 8px; }
-    .totals-row td:last-child { font-weight: 700; text-align: right; }
-    .totals-row.grand td { font-size: 14px; font-weight: 800; border-top: 2px solid #1a1a1a; padding-top: 8px; }
-
-    @media print {
-      body { padding: 16px 20px; }
-      .banner-allergen, .banner-special { break-inside: avoid; }
-    }
-  </style>
+  .actions { display: flex; justify-content: space-between; padding: 0 28px 26px; }
+  .btn { padding: 10px 22px; font-weight: 700; letter-spacing: 1px; font-size: 13px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-family: inherit; text-transform: uppercase; }
+  .btn-cancel { background: #1fb3b8; }
+  .btn-cancel:hover { background: #189da1; }
+  .btn-save { background: #5b5ecb; }
+  .btn-save:hover { background: #4e51b6; }
+</style>
 </head>
 <body>
-
-  <!-- ── Page Header ── -->
-  <div class="page-header">
-    <div class="meta">
-      <p><strong>Order Date:</strong> Monday, 11/3/2025</p>
-      <p><strong>Estimated Pick-Up Time:</strong> 9:30 AM</p>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">Clients</div>
+    <div class="block"><div class="add-btn">ADD CLIENT</div></div>
+    <div class="block">
+      <label>SEARCH ACCOUNTS</label>
+      <input value="group order demo" />
     </div>
-    <div class="logo">HUNGRY</div>
+    <div class="block">
+      <label>CREATION SOURCE</label>
+      <select><option>Admin Panel</option></select>
+    </div>
+    <div class="client active">Group Order Demo - East</div>
+    <div class="sub-client">Group Order Demo Master</div>
+    <div class="page-item">Page 1 <span class="play">▶</span></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <a>💬 New Request/Bug?</a>
+      <div class="user">Estefania - Washington, DC (EDT) ▼</div>
+      <div class="menu">Menu ≡</div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab">Overview</div>
+      <div class="tab">Diner Profiles</div>
+      <div class="tab">Reporting Programs</div>
+      <div class="tab active">Group Order Customers</div>
+      <div class="tab">Email Notifications</div>
+      <div class="tab">Promo Codes</div>
+      <div class="tab">Preference Profiles</div>
+      <div class="tab">Sales History</div>
+    </div>
+
+    <div class="content">
+      <div class="pager"><span>◁</span> Group Order Customers: Page 1 of 5 <span>▷</span></div>
+      <input class="search" placeholder="Search by name or email" />
+
+      <table>
+        <thead>
+          <tr>
+            <th>NAME</th>
+            <th>EMAIL</th>
+            <th>MARKETPLACE ADMIN DASHBOARD ACCESS?</th>
+            <th>GROUP ORDER ADMIN ACCESS</th>
+            <th>ALLERGEN ALERT</th>
+          </tr>
+        </thead>
+        <tbody id="customers"></tbody>
+      </table>
+    </div>
   </div>
+</div>
 
-  <h1 class="form-title">Food Partner Order Form: Group Order</h1>
-  <p class="form-subtitle">
-    Please accept this order for the menus that are finalized on your <a href="#">Chef Dashboard</a>.<br>
-    If you have any questions about this order, contact your Food Partner Network Manager using the contact info below.
-  </p>
-
-  <!-- ── Info Grid ── -->
-  <div class="info-grid">
-    <div class="info-block">
-      <h4>Order Info</h4>
-      <p><strong>Order Number:</strong><br>GRPSJC3410</p>
-      <p><strong>Headcount:</strong><br>7</p>
-      <p><strong>Setup Style:</strong><br>Individually Packaged</p>
-      <p><strong>Meal Type:</strong><br>Group Order</p>
+<!-- Modal -->
+<div class="backdrop" id="backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <span>Manage Group Order Customer Allergen Alerts</span>
+      <span class="close" onclick="closeModal()">✕</span>
     </div>
-    <div class="info-block">
-      <h4>Food Partner Info</h4>
-      <p><strong>Food Partner:</strong><br>TOGO'S Santa Clara</p>
-      <p><strong>Pickup Address:</strong><br>2350 Great America Pkwy.,<br>Santa Clara, CA 95054</p>
-      <p><strong>Pickup Instructions:</strong><br>—</p>
-    </div>
-    <div class="info-block">
-      <h4>Order Contact</h4>
-      <p><strong>Food Partner Manager:</strong><br>Maddie Parks</p>
-      <p><strong>Email:</strong><br>maddie@tryhungry.com</p>
-      <p><strong>Phone:</strong><br>—</p>
-      <p><strong>Sales Rep:</strong><br>Thomas Chavanas</p>
-      <p><strong>Contact:</strong><br>Nevan – Palo Alto</p>
-    </div>
-    <div class="info-block">
-      <h4>Delivery Contact</h4>
-      <p><strong>Operations Manager:</strong><br>Kyle Samuels</p>
-      <p><strong>Email:</strong><br>kyle@tryhungry.com</p>
-      <p><strong>Phone:</strong><br>555-555-5555</p>
-    </div>
-  </div>
-
-  <!-- ── Special Instructions heading ── -->
-  <div class="section-heading">Special Instructions to Food Partner</div>
-
-  <!-- ════════════════════════════════════════════
-       ALLERGEN ALERT BANNER — highest priority
-  ════════════════════════════════════════════ -->
-  <div class="banner-allergen">
-    <div class="banner-icon">⚠️</div>
-    <div class="banner-body">
-      <div class="banner-title">ALLERGEN ALERT (4 Items)</div>
-      <div class="banner-desc">
-        This order contains items with allergen alerts. Review all allergen items before preparing.<br>
-        Substitute with the closest safe match where indicated. Notify Food Partner Manager if any allergen request cannot be met.
+    <div class="modal-body">
+      <div class="section-title">Add Allergen Alerts for a User</div>
+      <div>
+        <div class="field-label">Allergens</div>
+        <div class="dropdown-wrap">
+          <div class="dropdown" onclick="toggleDropdown()">
+            <span id="dropdownLabel">- Select allergens -</span>
+            <span>▾</span>
+          </div>
+          <div class="dropdown-list" id="dropdownList"></div>
+        </div>
+        <div class="selected-pills" id="selectedPills"></div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:13px; color:#666;">Editing allergen alerts for: <b id="editingUser">—</b></div>
+      <div class="note" style="margin-top:14px;">
+        Please note: this will only apply the <b>next time</b> the group order customer places an order.
+        Please inform them you've added the allergen to their profile via email — they can now manage it
+        from their profile.
       </div>
     </div>
-  </div>
-
-  <!-- ── Special Requests Banner ── -->
-  <div class="banner-special">
-    <div class="banner-icon">⚠️</div>
-    <div class="banner-body">
-      <div class="banner-title">SPECIAL REQUESTS (10 Orders)</div>
-      <div class="banner-desc">Review all special requests before preparing. Notify Food Partner Manager if any request cannot be met.</div>
+    <div class="actions">
+      <button class="btn btn-cancel" onclick="closeModal()">CANCEL</button>
+      <button class="btn btn-save" onclick="saveAllergens()">SAVE</button>
     </div>
   </div>
+</div>
 
-  <!-- ── Menu Section ── -->
-  <div class="menu-section">
-    <h2>Menu: Sandwiches &amp; Salads</h2>
+<script>
+  const ALLERGENS = ["Peanuts","Tree Nuts","Milk/Dairy","Eggs","Wheat","Gluten","Soy","Fish","Crustaceans","Molluscs","Sesame","Mustard","Sulphites"];
 
-    <table class="item-table">
-      <thead>
+  const customers = [
+    { name:"Adil Baig", email:"abaig@tryhungry.com", mkt:"No", goa:"No", allergens:["Peanuts","Sesame"] },
+    { name:"VC Billingsley", email:"vc@coderabbit.ai", mkt:"No", goa:"No", allergens:[] },
+    { name:"Chris Cassion", email:"chris@coderabbit.ai", mkt:"No", goa:"No", allergens:["Gluten"] },
+    { name:"Wei Chen", email:"wei@techcorp.com", mkt:"No", goa:"No", allergens:[] },
+    { name:"Estefania Cordova", email:"estefania@hungerhub.com", mkt:"Yes", goa:"Yes", allergens:["Milk/Dairy","Eggs","Tree Nuts"] },
+    { name:"client dash demo", email:"clientadmindash+1@proton.me", mkt:"No", goa:"No", allergens:[] },
+    { name:"Garten Demo", email:"gartenhungrydemo@protonmail.com", mkt:"Yes", goa:"Yes", allergens:["Soy"] },
+    { name:"HUNGRY Demo", email:"jariate@tryhungry.com", mkt:"No", goa:"No", allergens:[] },
+    { name:"Meta Demo", email:"fssalesdemo@tryhungry.com", mkt:"Yes", goa:"Yes", allergens:["Fish","Crustaceans","Molluscs"] },
+    { name:"Mia Dominic", email:"mia@coderabbit.ai", mkt:"No", goa:"No", allergens:[] },
+    { name:"Chloe Dubois", email:"chloe@techcorp.com", mkt:"No", goa:"No", allergens:["Mustard"] },
+    { name:"Amanda E", email:"amanda+108@tryhungry.com", mkt:"No", goa:"No", allergens:[] },
+    { name:"Amanda E", email:"amanda+1@tryhungry.com", mkt:"No", goa:"No", allergens:["Sulphites","Wheat"] },
+    { name:"Lena Fischer", email:"lena@techcorp.com", mkt:"No", goa:"No", allergens:[] },
+    { name:"Abhilash Harish Srivathsa", email:"abhilash@coderabbit.ai", mkt:"No", goa:"No", allergens:[] },
+  ];
+
+  let currentIndex = null;
+  let workingSet = new Set();
+
+  function renderCustomers() {
+    const tbody = document.getElementById("customers");
+    tbody.innerHTML = customers.map((c, i) => {
+      const pills = c.allergens.map(a => `<span class="pill">${a}</span>`).join("");
+      return `
         <tr>
-          <th>Item</th>
-          <th>Qty</th>
-          <th>Retail Price</th>
-          <th>HUNGRY Price</th>
-          <th>Payout Price</th>
-        </tr>
-      </thead>
-      <tbody>
-
-        <!-- ── Item 1: allergen + special request ── -->
-        <tr class="item-row-main">
+          <td>${c.name}</td>
+          <td>${c.email}</td>
+          <td>${c.mkt}</td>
+          <td>${c.goa}</td>
           <td>
-            <div class="item-name">Santa Fe Chicken Salad (Half)</div>
-            <div class="item-desc">Avocado, Tomatoes, Black Bean &amp; Corn Salsa, Cheddar Cheese, Tortilla Strips &amp; Pepitas Dressing</div>
-            <div class="item-allergens-text">Contains: gluten &amp; dairy &amp; allium &amp; wheat</div>
-          </td>
-          <td>1</td>
-          <td>$12.00</td>
-          <td>$9.45</td>
-          <td>$9.45</td>
-        </tr>
-        <tr class="item-row-details">
-          <td colspan="5">
-            <!-- Allergen alert at item level -->
-            <div class="allergen-alert-block">
-              <div class="al-top">
-                <div class="al-icon">⚠️</div>
-                <div class="al-pill">Allergen Alert: Dairy</div>
-              </div>
+            <div class="allergen-cell">
+              ${pills}
             </div>
-            <!-- Special request at item level -->
-            <div class="special-request-block">
-              <div class="label">Customer Special Requests:</div>
-              <div class="value">NO CHEESE</div>
-            </div>
-            <div class="vendor-notes"><strong>Vendor Notes:</strong> Packaging: Individually Packaged</div>
           </td>
-        </tr>
+        </tr>`;
+    }).join("");
+  }
 
-        <!-- ── Item 2: no allergen, no special request ── -->
-        <tr class="item-row-main">
-          <td>
-            <div class="item-name">Santa Fe Chicken Salad (Half)</div>
-            <div class="item-desc">Avocado, Tomatoes, Black Bean &amp; Corn Salsa, Cheddar Cheese, Tortilla Strips &amp; Pepitas Dressing</div>
-            <div class="item-allergens-text">Contains: gluten &amp; dairy &amp; allium &amp; wheat</div>
-          </td>
-          <td>1</td>
-          <td>Not Provided</td>
-          <td>$9.45</td>
-          <td>$9.45</td>
-        </tr>
-        <tr class="item-row-details">
-          <td colspan="5">
-            <div class="vendor-notes"><strong>Vendor Notes:</strong> Packaging: Individually Packaged</div>
-          </td>
-        </tr>
+  function openModal(i) {
+    currentIndex = i;
+    workingSet = new Set(customers[i].allergens);
+    document.getElementById("editingUser").textContent = `${customers[i].name} (${customers[i].email})`;
+    renderDropdown();
+    renderSelected();
+    document.getElementById("backdrop").classList.add("open");
+  }
 
-        <!-- ── Item 3: allergen only ── -->
-        <tr class="item-row-main">
-          <td>
-            <div class="item-name">Turkey &amp; Avocado BLT (Full)</div>
-            <div class="item-desc">Turkey, Bacon, Avocado, Lettuce, Tomato, Mayo on Sourdough</div>
-            <div class="item-allergens-text">Contains: gluten &amp; soy &amp; wheat</div>
-          </td>
-          <td>1</td>
-          <td>$14.00</td>
-          <td>$11.20</td>
-          <td>$11.20</td>
-        </tr>
-        <tr class="item-row-details">
-          <td colspan="5">
-            <!-- Allergen alert at item level -->
-            <div class="allergen-alert-block">
-              <div class="al-top">
-                <div class="al-icon">⚠️</div>
-                <div class="al-pill">Allergen Alert: Gluten</div>
-              </div>
-            </div>
-            <div class="vendor-notes"><strong>Vendor Notes:</strong> Packaging: Individually Packaged</div>
-          </td>
-        </tr>
+  function closeModal() {
+    document.getElementById("backdrop").classList.remove("open");
+    document.getElementById("dropdownList").classList.remove("open");
+  }
 
-        <!-- ── Item 4: special request only ── -->
-        <tr class="item-row-main">
-          <td>
-            <div class="item-name">Caesar Salad (Full)</div>
-            <div class="item-desc">Romaine, Parmesan, Croutons, Caesar Dressing</div>
-            <div class="item-allergens-text">Contains: gluten &amp; dairy &amp; egg &amp; fish</div>
-          </td>
-          <td>3</td>
-          <td>$13.00</td>
-          <td>$10.40</td>
-          <td>$31.20</td>
-        </tr>
-        <tr class="item-row-details">
-          <td colspan="5">
-            <div class="special-request-block">
-              <div class="label">Customer Special Requests:</div>
-              <div class="value">DRESSING ON THE SIDE</div>
-            </div>
-            <div class="vendor-notes"><strong>Vendor Notes:</strong> Packaging: Individually Packaged</div>
-          </td>
-        </tr>
+  function toggleDropdown() {
+    document.getElementById("dropdownList").classList.toggle("open");
+  }
 
-        <!-- ── Item 5: allergen – cancel if cannot accommodate ── -->
-        <tr class="item-row-main">
-          <td>
-            <div class="item-name">Thai Peanut Noodle Bowl (Full)</div>
-            <div class="item-desc">Rice Noodles, Edamame, Shredded Carrots, Cabbage, Cilantro, Thai Peanut Sauce</div>
-            <div class="item-allergens-text">Contains: peanuts &amp; soy &amp; gluten</div>
-          </td>
-          <td>1</td>
-          <td>$15.00</td>
-          <td>$12.00</td>
-          <td>$12.00</td>
-        </tr>
-        <tr class="item-row-details">
-          <td colspan="5">
-            <!-- Cancel-if-cannot-accommodate allergen alert -->
-            <div class="allergen-alert-block">
-              <div class="al-top">
-                <div class="al-icon">⚠️</div>
-                <div class="al-pill">Allergen Alert: Peanut</div>
-              </div>
-            </div>
-            <div class="vendor-notes"><strong>Vendor Notes:</strong> Packaging: Individually Packaged</div>
-          </td>
-        </tr>
+  function renderDropdown() {
+    const list = document.getElementById("dropdownList");
+    list.innerHTML = ALLERGENS.map(a => `
+      <label>
+        <input type="checkbox" ${workingSet.has(a) ? "checked" : ""} onchange="toggleAllergen('${a}', this.checked)" />
+        ${a}
+      </label>
+    `).join("");
+  }
 
-      </tbody>
+  function toggleAllergen(a, checked) {
+    if (checked) workingSet.add(a); else workingSet.delete(a);
+    renderSelected();
+    renderDropdown();
+    updateDropdownLabel();
+  }
 
-      <!-- ── Totals ── -->
-      <tfoot>
-        <tr class="totals-row">
-          <td colspan="4" style="text-align:right; padding-top:16px; font-size:12px;">Subtotal</td>
-          <td style="text-align:right; padding-top:16px;">$72.50</td>
-        </tr>
-        <tr class="totals-row grand">
-          <td colspan="4" style="text-align:right;">Total Payout</td>
-          <td>$72.50</td>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
+  function removeAllergen(a) {
+    workingSet.delete(a);
+    renderDropdown();
+    renderSelected();
+    updateDropdownLabel();
+  }
 
+  function updateDropdownLabel() {
+    const label = document.getElementById("dropdownLabel");
+    label.textContent = workingSet.size ? `${workingSet.size} selected` : "- Select allergens -";
+  }
+
+  function renderSelected() {
+    const wrap = document.getElementById("selectedPills");
+    wrap.innerHTML = [...workingSet].map(a => `
+      <span class="selected-pill">${a}<span class="x" onclick="removeAllergen('${a}')">×</span></span>
+    `).join("");
+    updateDropdownLabel();
+  }
+
+  function saveAllergens() {
+    customers[currentIndex].allergens = [...workingSet];
+    renderCustomers();
+    closeModal();
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".dropdown-wrap")) {
+      document.getElementById("dropdownList").classList.remove("open");
+    }
+  });
+
+  renderCustomers();
+</script>
 </body>
 </html>
