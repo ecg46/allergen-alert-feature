@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allergen Alert — Vendor Communication Flow</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #F5F4F1;
+    color: #1C1C1E;
+    padding: 48px 16px 80px;
+  }
+
+  /* ── Header ── */
+  .page-header {
+    max-width: 980px;
+    margin: 0 auto 24px;
+  }
+  .page-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
+  }
+  .page-header p {
+    font-size: 14px;
+    color: #6B6B6B;
+    max-width: 560px;
+    line-height: 1.6;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: #555;
+    font-weight: 500;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ── Flow wrapper ── */
+  .flow {
+    max-width: 980px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Arrow ── */
+  .arrow {
+    width: 2px;
+    height: 28px;
+    background: #C9C9C9;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .arrow::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid #C9C9C9;
+  }
+
+  /* ── Cards ── */
+  .card {
+    width: 100%;
+    max-width: 500px;
+    border-radius: 14px;
+    padding: 18px 22px;
+  }
+  .card-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 6px;
+  }
+  .card-title {
+    font-size: 15px;
+    font-weight: 650;
+    margin-bottom: 5px;
+    line-height: 1.3;
+  }
+  .card-body {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.6;
+  }
+  .card-body ul {
+    list-style: none;
+    margin-top: 6px;
+  }
+  .card-body ul li {
+    padding: 2px 0;
+    display: flex;
+    gap: 7px;
+    align-items: flex-start;
+  }
+  .card-body ul li::before {
+    content: '·';
+    color: #ABABAB;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* Card themes */
+  .card-system   { background: #EEEFFE; border: 1.5px solid #C5C8F5; }
+  .card-system   .card-label { color: #4640C4; }
+  .card-system   .card-title { color: #2D2A8F; }
+
+  .card-vendor   { background: #EDFBF5; border: 1.5px solid #9FE8C8; }
+  .card-vendor   .card-label { color: #0A7252; }
+  .card-vendor   .card-title { color: #075C41; }
+
+  .card-decision { background: #FFFBEB; border: 2px dashed #F5CC5A; }
+  .card-decision .card-title { color: #7A5200; font-size: 14px; }
+
+  .card-fp       { background: #FFF4E5; border: 1.5px solid #F5C97A; }
+  .card-fp       .card-label { color: #A05E00; }
+  .card-fp       .card-title { color: #7A4500; }
+
+  .card-csm      { background: #F4F0FD; border: 1.5px solid #CBBFEF; }
+  .card-csm      .card-label { color: #5B31B8; }
+  .card-csm      .card-title { color: #3D1F8F; }
+
+  .card-new      { background: #FFF0F0; border: 1.5px solid #F5AAAA; }
+  .card-new      .card-label { color: #BE2020; }
+  .card-new      .card-title { color: #991515; }
+
+  .card-muted    { background: #F2F2F2; border: 1.5px solid #DCDCDC; }
+  .card-muted    .card-label { color: #888; }
+  .card-muted    .card-title { color: #555; }
+
+  /* ── Branch layout ── */
+  .branch-row {
+    width: 100%;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .branch-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .branch-tag {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #ABABAB;
+    margin-bottom: 8px;
+  }
+
+  /* ── Section divider ── */
+  .section-divider {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0;
+  }
+  .section-divider span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #ABABAB;
+    white-space: nowrap;
+  }
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #DCDCDC;
+  }
+
+  /* ── Audit note ── */
+  .audit-note {
+    width: 100%;
+    max-width: 500px;
+    background: #F9F9F9;
+    border: 1px solid #E0E0E0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: #777;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  /* ── Warning tag ── */
+  .tbd-tag {
+    display: inline-block;
+    background: #FFF4E5;
+    border: 1px solid #F5C97A;
+    color: #A05E00;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    padding: 2px 8px;
+    margin-top: 8px;
+  }
+
+  /* ── Paths row (3 columns) ── */
+  .paths-row {
+    width: 100%;
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .path-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .path-col .card {
+    max-width: 100%;
+    height: 100%;
+  }
+
+  /* Footer */
+  .footer {
+    max-width: 980px;
+    margin: 56px auto 0;
+    text-align: center;
+    font-size: 12px;
+    color: #ABABAB;
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── HEADER ─── -->
+<div class="page-header">
+  <h1>Allergen Alert — Vendor Communication Flow</h1>
+  <p>How a diner's allergen alert travels from their profile to the kitchen — and where the team needs to step in.</p>
+</div>
+
+<!-- ─── OVERVIEW ─── -->
+<div style="max-width:980px; margin: 0 auto 40px; background:#fff; border:1.5px solid #E5E4E0; border-radius:16px; padding:28px 32px;">
+  <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#ABABAB; margin-bottom:12px;">Overview</div>
+  <div style="font-size:15px; font-weight:650; color:#1C1C1E; margin-bottom:12px; line-height:1.5;">The long-term vision is for the Chef Dashboard to be every vendor's primary tool — where orders, allergen alerts, and confirmations all live in one place. We're not there yet.</div>
+  <div style="font-size:13px; color:#6B6B6B; line-height:1.8;">
+    Right now, most vendors still operate out of their email inbox, and a hard switch to dashboard-only would break the workflows we depend on to get orders fulfilled. So for v1, we're building backwards: vendors keep working exactly as they do today, and we layer one new accountability step on top for any order that contains allergen alerts. As dashboard adoption grows, the email paths become the fallback — and eventually, the dashboard becomes the gate.
+  </div>
+  <div style="margin-top:20px; padding-top:18px; border-top:1px solid #F0EFEC;">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#3ABF8A"></div>Vendor Action</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#F5A623"></div>HUNGRY Team — Intervention</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#E85F5F"></div>New Step</div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── FLOW ─── -->
+<div class="flow">
+
+  <!-- 1. Order assigned -->
+  <div class="card card-system">
+    <div class="card-title">Group Order Assigned to Vendor</div>
+    <div class="card-body">A new assignment email is sent automatically to the vendor at the moment the order is assigned.
+      <ul>
+        <li>Lets the vendor know: if the final order contains diners with allergen alerts, they will be required to confirm they have reviewed them at cutoff.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="arrow"></div>
+
+  <!-- 2. Standard vendor workflow -->
+  <div class="card card-system">
+    <div class="card-title">Cutoff Email Sends as Normal</div>
+    <div class="card-body">Standard cutoff email goes out — full PDF, manifest, and labels attached. No change to the vendor's usual workflow for every order.</div>
+  </div>
+
+  <div class="arrow"></div>
+
+  <!-- 3. Decision: allergen alerts? -->
+  <div class="card card-decision" style="max-width:500px;">
+    <div class="card-title">⚡&nbsp; Does this order contain any allergen alerts?</div>
+  </div>
+
+  <!-- Branch: NO / YES -->
+  <div class="branch-row" style="margin-top:0;">
+
+    <!-- NO -->
+    <div class="branch-col">
+      <div style="width:2px; height:24px; background:#C9C9C9;"></div>
+      <div class="branch-tag">No</div>
+      <div class="card card-muted" style="max-width:100%;">
+        <div class="card-label">No Action Required</div>
+        <div class="card-title">Standard Flow Continues</div>
+        <div class="card-body">No allergen column, no confirmation needed. Order proceeds as normal.</div>
+      </div>
+    </div>
+
+    <!-- YES -->
+    <div class="branch-col">
+      <div style="width:2px; height:24px; background:#C9C9C9;"></div>
+      <div class="branch-tag">Yes</div>
+      <div class="card card-new" style="max-width:100%;">
+        <div class="card-label">New Step</div>
+        <div class="card-title">Allergen Warning Added to Cutoff Email</div>
+        <div class="card-body">Vendor receives their standard cutoff email plus a clear allergen warning. The email lists all diner allergen alerts in the order and prompts the vendor to confirm before food is prepared.</div>
+      </div>
+
+      <div class="arrow"></div>
+
+      <!-- Confirmation paths -->
+      <div class="section-divider"><span>Vendor must confirm via one of these paths — first completed counts</span></div>
+
+      <div style="height:12px;"></div>
+
+      <div class="paths-row">
+
+        <div class="path-col">
+          <div class="card card-vendor">
+            <div class="card-label">Path 1 · Email</div>
+            <div class="card-title">Confirm via Email</div>
+            <div class="card-body">Vendor clicks the "Confirm Allergen Alerts" button in the cutoff email, lands on a confirmation page, and confirms with one click. Confirmation is logged automatically.
+            </div>
+          </div>
+        </div>
+
+        <div class="path-col">
+          <div class="card card-vendor">
+            <div class="card-label">Path 2 · Chef Dashboard</div>
+            <div class="card-title">Confirm via Allergen Banner</div>
+            <div class="card-body">Vendor logs into the Chef Dashboard. An allergen alert banner is shown above the order table. Vendor confirms directly within the banner.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="arrow"></div>
+
+      <div class="audit-note">
+        ✓ &nbsp;Confirmation logged automatically<br>
+        <strong>Timestamp &nbsp;·&nbsp; Order ID &nbsp;·&nbsp; Path Used</strong><br>
+        Dashboard banner dismissed. Audit trail created.<br><br>
+        <span style="color:#ABABAB; font-size:11px;">Note — PDF, manifest, and labels are delivered to the vendor regardless of whether confirmation is received. There is no hard gate on order access in v1.</span>
+      </div>
+
+      <div class="arrow"></div>
+
+      <!-- Decision: confirmed after cutoff email? -->
+      <div class="card card-decision" style="max-width:100%;">
+        <div class="card-title">⚡&nbsp; Did the vendor confirm after the cutoff email?</div>
+      </div>
+
+      <div class="branch-row" style="margin-top:0;">
+
+        <!-- YES confirmed -->
+        <div class="branch-col">
+          <div style="width:2px; height:24px; background:#C9C9C9;"></div>
+          <div class="branch-tag">Yes</div>
+          <div class="card card-vendor" style="max-width:100%;">
+            <div class="card-label">Confirmed ✓</div>
+            <div class="card-title">No Further Alerts Sent</div>
+            <div class="card-body">Follow-up and final alerts are suppressed. Kitchen prepares the order with full allergen visibility across all surfaces.</div>
+          </div>
+        </div>
+
+        <!-- NO — follow up -->
+        <div class="branch-col">
+          <div style="width:2px; height:24px; background:#C9C9C9;"></div>
+          <div class="branch-tag">No</div>
+
+          <!-- T+30 follow-up -->
+          <div class="card card-new" style="max-width:100%;">
+            <div class="card-label">New Step · T+30 min</div>
+            <div class="card-title">Follow-Up Alert Sent</div>
+            <div class="card-body">30 minutes after the cutoff email, if no confirmation has been received, a follow-up alert is sent via the vendor's channel preference (email, SMS, or both).</div>
+          </div>
+
+          <div class="arrow"></div>
+
+          <!-- Decision: confirmed after follow-up? -->
+          <div class="card card-decision" style="max-width:100%;">
+            <div class="card-title">⚡&nbsp; Did the vendor confirm after the follow-up?</div>
+          </div>
+
+          <div class="branch-row" style="margin-top:0;">
+
+            <div class="branch-col">
+              <div style="width:2px; height:24px; background:#C9C9C9;"></div>
+              <div class="branch-tag">Yes</div>
+              <div class="card card-vendor" style="max-width:100%;">
+                <div class="card-label">Confirmed ✓</div>
+                <div class="card-title">No Further Alerts Sent</div>
+                <div class="card-body">Final alert suppressed. No FP escalation.</div>
+              </div>
+            </div>
+
+            <div class="branch-col">
+              <div style="width:2px; height:24px; background:#C9C9C9;"></div>
+              <div class="branch-tag">No</div>
+
+              <!-- Final alert + FP simultaneously -->
+              <div class="card card-new" style="max-width:100%;">
+                <div class="card-label">New Step · Final Alert</div>
+                <div class="card-title">Final Alert + FP Notification Fire Simultaneously</div>
+                <div class="card-body">The final vendor alert is sent via channel preference at the same moment an automated alert fires to the FP/ops team for the market.
+                  <ul style="margin-top:8px;">
+                    <li>Final alert timing is anchored to pick-up time — exact window TBD by product.</li>
+                    <li>FP alert is modeled on the existing decline alert pattern.</li>
+                    <li>If the vendor confirms after receiving the final alert, it is still logged — but FP has already been notified.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="arrow"></div>
+
+              <div class="card card-fp" style="max-width:100%;">
+                <div class="card-label">HUNGRY Team — Intervention</div>
+                <div class="card-title">FP Team Follows Up Directly</div>
+                <div class="card-body">FP team contacts the vendor to confirm allergen alerts have been reviewed before the order is prepared. Resolution is recorded per FP process.</div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="arrow"></div>
+
+      <!-- Kitchen prepares -->
+      <div class="card card-vendor" style="max-width:100%;">
+        <div class="card-label">Vendor · Kitchen</div>
+        <div class="card-title">Kitchen Prepares the Order</div>
+        <div class="card-body">Allergen alerts are visible across every surface:
+          <ul style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+            <li style="display:flex; gap:10px; align-items:flex-start;"><span>📋</span><span><strong>Chef Dashboard</strong> — allergen column in the group order table + summary banner above</span></li>
+            <li style="display:flex; gap:10px; align-items:flex-start;"><span>🏷️</span><span><strong>Printed label</strong> — "ALLERGEN:" printed beside the diner's name on every bag</span></li>
+            <li style="display:flex; gap:10px; align-items:flex-start;"><span>📄</span><span><strong>PDF order summary</strong> — banner at the top + alert shown inline under each item</span></li>
+            <li style="display:flex; gap:10px; align-items:flex-start;"><span>📑</span><span><strong>Order manifest</strong> — allergen alert shown as a line within the diner's order</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="height:32px;"></div>
+  <div class="arrow"></div>
+
+  <!-- HUNGRY Team: if incident -->
+  <div class="card card-csm">
+    <div class="card-label">HUNGRY Team — If an Incident Is Reported</div>
+    <div class="card-title">Full Acknowledgment Log Available for Every Order</div>
+    <div class="card-body">If an allergen-related issue comes up after the order is fulfilled, the team has a complete paper trail to reference.
+      <ul style="margin-top:10px; display:flex; flex-direction:column; gap:6px;">
+        <li style="display:flex; gap:10px; align-items:flex-start;"><span>🔍</span><span><strong>Admin view</strong> — acknowledgment log accessible per order</span></li>
+        <li style="display:flex; gap:10px; align-items:flex-start;"><span>📊</span><span><strong>Chef Network</strong> — confirmation status visible as a column in the order status table</span></li>
+        <li style="display:flex; gap:10px; align-items:flex-start;"><span>🕐</span><span><strong>Every log entry captures:</strong> timestamp · order ID · path used</span></li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  HUNGRY &nbsp;·&nbsp; Allergen Alert Vendor Communication Flow &nbsp;·&nbsp; v1 &nbsp;·&nbsp; Internal
+</div>
+
+</body>
+</html>
