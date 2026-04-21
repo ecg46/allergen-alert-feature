@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chef Network — Chef Order Status</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; color: #333; background: #eff1f6; }
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: -webkit-linear-gradient(top, rgb(255, 98, 77) 0%, rgb(238, 52, 109) 100%); color: #fff; padding: 20px 0; }
+  .sidebar h2 { font-size: 15px; padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.25); }
+  .sidebar a { display: block; padding: 14px 20px; color: #ddd; text-decoration: none; font-size: 13px; }
+  .sidebar a.active { background: rgba(255,255,255,0.2); color: #fff; font-weight: 600; position: relative; }
+  .sidebar a.active::after { content: ""; position: absolute; right: -10px; top: 50%; transform: translateY(-50%); border: 10px solid transparent; border-left-color: #ff4f2e; }
+  .main { flex: 1; padding: 30px 40px; background: #eff1f6; }
+  .topbar { display: flex; justify-content: flex-end; gap: 30px; align-items: center; margin-bottom: 20px; font-size: 13px; }
+  .topbar .bug { color: #3aa3a3; }
+  .content-box { background: #ffffff; border-radius: 6px; padding: 28px 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  h1 { color: #ff4f2e; font-size: 14px; letter-spacing: 1px; padding-bottom: 10px; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
+  .filters { display: flex; gap: 40px; margin-bottom: 20px; align-items: flex-end; }
+  .filter-group label { display: block; font-size: 11px; font-weight: 700; color: #666; letter-spacing: .5px; margin-bottom: 6px; }
+  select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 3px; background: #fff; font-size: 13px; min-width: 180px; }
+  .date-range { font-size: 14px; color: #333; align-self: center; }
+  .date-range .arrow { color: #888; cursor: pointer; margin: 0 8px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+  th { background: #eff1f6; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #555; border-bottom: 1px solid #ddd; }
+  td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+  tr:hover { background: #fafafa; }
+  .accepted { color: #3aa3a3; font-weight: 600; }
+  .allergen-th { position: relative; }
+  .tooltip-icon { color: #999; cursor: pointer; font-size: 13px; margin-left: 4px; position: relative; }
+  .tooltip-text { display: none; position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: 280px; background: #333; color: #fff; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; line-height: 1.5; padding: 12px 14px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100; }
+  .tooltip-text::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #333; }
+  .tooltip-icon:hover .tooltip-text, .tooltip-icon:focus .tooltip-text { display: block; }
+  .allergen-log { color: #555; font-size: 12px; }
+  .allergen-log strong { color: #2d8a3e; font-weight: 600; display: block; margin-bottom: 2px; }
+  .allergen-log .ts { color: #888; font-size: 11px; font-family: "SF Mono", Consolas, monospace; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h2>Chef Network</h2>
+    <a href="#" class="active">Chef Order Status</a>
+    <a href="#">Menu Item Updates</a>
+    <a href="#">Chef Schedule Updates</a>
+    <a href="#">Chef Confirmations</a>
+    <a href="#">Chef Directory</a>
+    <a href="#">Vendor / Client Map</a>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <span class="bug">💬 New Request/Bug?</span>
+      <span>Estefania - San Francisco, CA (PDT) ▾</span>
+      <span>Menu ☰</span>
+    </div>
+    <div class="content-box">
+      <h1>CHEF ORDER STATUS</h1>
+      <div class="filters">
+        <div class="filter-group">
+          <label>HEADQUARTER</label>
+          <select><option>San Francisco, CA</option></select>
+        </div>
+        <div class="date-range"><span class="arrow">◄</span> April 12, 2026 (Sun) to April 18, 2026 (Sat) <span class="arrow">►</span></div>
+        <div class="filter-group">
+          <label>FILTER ORDER STATUS</label>
+          <select><option>No Filter</option></select>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Order # ⇅</th>
+            <th>Order Date ⇅</th>
+            <th>Chef ⇅</th>
+            <th>Chef Email</th>
+            <th>Chef Phone</th>
+            <th>Accepted Order? ⇅</th>
+            <th class="allergen-th">Allergen Alert <span class="tooltip-icon" tabindex="0">ⓘ<span class="tooltip-text">Shown only when this vendor order includes items from group order customers with allergen alerts set on their profile. The timestamp indicates when the vendor acknowledged the alert.</span></span></th>
+            <th>Auto-Accepted</th>
+            <th>CN Reviewed</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+<script>
+const rows = [
+  ["SFO5745","04/13/2026","Paul Kassem","order@gourmetcateringbayarea.com","+14159330728"],
+  ["SFO5689","04/13/2026","Paul Kassem","order@gourmetcateringbayarea.com","+14159330728"],
+  ["SFO5763","04/13/2026","Fuxion Grill","freddie.lopez@fuxiongrill.com","+14083752023"],
+  ["SFO5800","04/13/2026","Fuxion Grill","freddie.lopez@fuxiongrill.com","+14083752023"],
+  ["GRPSFO10060","04/14/2026","Burma Classic SF","info@burmaclassic.com","+14157309720"],
+  ["GRPSFO10064","04/14/2026","SSB Catering","brian@ssbcatering.com","+16502811333"],
+  ["GRPSFO10064","04/14/2026","jW Catering","jeffrey@jwcatering.com","+14084893200"],
+  ["GRPSFO10064","04/14/2026","Sumac Modern Street Food","sumac@gastroboteats.com","+14158028853"],
+  ["GRPSFO10064","04/14/2026","Erik's Deli Cafe - Foster City","fostercity@eriksdelicafe.com","+14087591212"],
+  ["GRPSFO10070","04/14/2026","Burma Classic SF","info@burmaclassic.com","+14157309720"],
+  ["GRPSFO10076","04/14/2026","SSB Catering","brian@ssbcatering.com","+16502811333"],
+  ["GRPSFO10076","04/14/2026","jW Catering","jeffrey@jwcatering.com","+14084893200"],
+  ["GRPSFO10076","04/14/2026","Sumac Modern Street Food","sumac@gastroboteats.com","+14158028853"],
+  ["GRPSFO10076","04/14/2026","Erik's Deli Cafe - Foster City","fostercity@eriksdelicafe.com","+14087591212"],
+  ["GRPSFO10081","04/14/2026","SSB Catering","brian@ssbcatering.com","+16502811333"],
+  ["GRPSFO10081","04/14/2026","jW Catering","jeffrey@jwcatering.com","+14084893200"],
+  ["GRPSFO10081","04/14/2026","Sumac Modern Street Food","sumac@gastroboteats.com","+14158028853"],
+  ["GRPSFO10081","04/14/2026","Erik's Deli Cafe - Foster City","fostercity@eriksdelicafe.com","+14087591212"],
+  ["GRPSFO10086","04/14/2026","Poke Life","pokelifeorders@gmail.com","+14158451973"],
+  ["GRPSFO10086","04/14/2026","Umami Express - San Francisco","sfsoma@umamiexpress.co","+16284444320"],
+  ["GRPSFO10086","04/14/2026","The Little Chihuahua","accounts@tlcmex.com","+16282241274"],
+];
+
+// Deterministic confirmation timestamps per order (within a plausible window before order date)
+function confirmTs(orderDate, i) {
+  // Confirmation typically the prior evening / morning of
+  const [m,d,y] = orderDate.split("/").map(Number);
+  const base = new Date(y, m-1, d-1, 17, 32); // 5:32pm day before
+  base.setMinutes(base.getMinutes() + (i * 7) % 180);
+  const pad = n => String(n).padStart(2,"0");
+  const date = `${pad(base.getMonth()+1)}/${pad(base.getDate())}/${base.getFullYear()}`;
+  let h = base.getHours(); const ampm = h>=12?"PM":"AM"; h = h%12||12;
+  return `${date}, ${h}:${pad(base.getMinutes())} ${ampm} PDT`;
+}
+
+// Indices of rows that have NO allergen alert (empty cell)
+const noAllergen = new Set([1, 3, 5, 9, 11, 15, 19]);
+
+const tbody = document.getElementById("rows");
+rows.forEach((r, i) => {
+  const tr = document.createElement("tr");
+  const allergenCell = noAllergen.has(i)
+    ? `<td></td>`
+    : `<td class="allergen-log"><strong>Confirmed</strong><span class="ts">${confirmTs(r[1], i)}</span></td>`;
+  tr.innerHTML = `
+    <td>${r[0]}</td>
+    <td>${r[1]}</td>
+    <td>${r[2]}</td>
+    <td>${r[3]}</td>
+    <td>${r[4]}</td>
+    <td class="accepted">Accepted</td>
+    ${allergenCell}
+    <td></td>
+    <td></td>
+  `;
+  tbody.appendChild(tr);
+});
+</script>
+</body>
+</html>
