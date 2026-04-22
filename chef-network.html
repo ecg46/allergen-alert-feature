@@ -35,6 +35,9 @@
   .allergen-log { color: #555; font-size: 12px; }
   .allergen-log strong { color: #2d8a3e; font-weight: 600; display: block; margin-bottom: 2px; }
   .allergen-log .ts { color: #888; font-size: 11px; font-family: "SF Mono", Consolas, monospace; }
+  .final-alert { color: #555; font-size: 12px; }
+  .final-alert strong { color: #D97706; font-weight: 600; display: block; margin-bottom: 2px; }
+  .final-alert .ts { color: #888; font-size: 11px; font-family: "SF Mono", Consolas, monospace; }
 </style>
 </head>
 <body>
@@ -123,15 +126,30 @@ function confirmTs(orderDate, i) {
   return `${date}, ${h}:${pad(base.getMinutes())} ${ampm} PDT`;
 }
 
-// Indices of rows that have NO allergen alert (empty cell)
+// Final alert timestamp — morning of order day, before pickup
+function finalAlertTs(orderDate, i) {
+  const [m,d,y] = orderDate.split("/").map(Number);
+  const base = new Date(y, m-1, d, 6, 15);
+  base.setMinutes(base.getMinutes() + (i * 11) % 90);
+  const pad = n => String(n).padStart(2,"0");
+  const date = `${pad(base.getMonth()+1)}/${pad(base.getDate())}/${base.getFullYear()}`;
+  let h = base.getHours(); const ampm = h>=12?"PM":"AM"; h = h%12||12;
+  return `${date}, ${h}:${pad(base.getMinutes())} ${ampm} PDT`;
+}
+
+// Indices of rows with no allergen (empty cell)
 const noAllergen = new Set([1, 3, 5, 9, 11, 15, 19]);
+// Indices where final alert has been sent but vendor has not yet confirmed
+const finalAlertSent = new Set([2, 7, 13]);
 
 const tbody = document.getElementById("rows");
 rows.forEach((r, i) => {
   const tr = document.createElement("tr");
   const allergenCell = noAllergen.has(i)
     ? `<td></td>`
-    : `<td class="allergen-log"><strong>Confirmed</strong><span class="ts">${confirmTs(r[1], i)}</span></td>`;
+    : finalAlertSent.has(i)
+      ? `<td class="final-alert"><strong>Final Alert Sent</strong><span class="ts">${finalAlertTs(r[1], i)}</span></td>`
+      : `<td class="allergen-log"><strong>Confirmed</strong><span class="ts">${confirmTs(r[1], i)}</span></td>`;
   tr.innerHTML = `
     <td>${r[0]}</td>
     <td>${r[1]}</td>
