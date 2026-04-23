@@ -29,7 +29,7 @@
   .accepted { color: #3aa3a3; font-weight: 600; }
   .allergen-th { position: relative; }
   .tooltip-icon { color: #999; cursor: pointer; font-size: 13px; margin-left: 4px; position: relative; }
-  .tooltip-text { display: none; position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: 280px; background: #333; color: #fff; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; line-height: 1.5; padding: 12px 14px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100; }
+  .tooltip-text { display: none; position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: 320px; background: #333; color: #fff; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; line-height: 1.5; padding: 12px 14px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100; }
   .tooltip-text::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #333; }
   .tooltip-icon:hover .tooltip-text, .tooltip-icon:focus .tooltip-text { display: block; }
   .allergen-log { color: #555; font-size: 12px; }
@@ -67,7 +67,11 @@
         <div class="date-range"><span class="arrow">◄</span> April 12, 2026 (Sun) to April 18, 2026 (Sat) <span class="arrow">►</span></div>
         <div class="filter-group">
           <label>FILTER ORDER STATUS</label>
-          <select><option>No Filter</option></select>
+          <select id="statusFilter">
+            <option value="">No Filter</option>
+            <option value="allergen-confirmed">Allergen Alert – Confirmed</option>
+            <option value="allergen-final">Allergen Alert – Final Alert Sent</option>
+          </select>
         </div>
       </div>
       <table>
@@ -79,7 +83,7 @@
             <th>Chef Email</th>
             <th>Chef Phone</th>
             <th>Accepted Order? ⇅</th>
-            <th class="allergen-th">Allergen Alert <span class="tooltip-icon" tabindex="0">ⓘ<span class="tooltip-text">Shown only when this vendor order includes items from group order customers with allergen alerts set on their profile. The timestamp indicates when the vendor acknowledged the alert.</span></span></th>
+            <th class="allergen-th">Allergen Alert <span class="tooltip-icon" tabindex="0">ⓘ<span class="tooltip-text">Only appears on group orders that include customers with allergen alerts on their profile. <strong style="color:#7dd3b0">Confirmed</strong>: the vendor acknowledged the alert at that time. <strong style="color:#fbbf24">Final Alert Sent</strong>: a final reminder has been sent because the vendor had not yet confirmed.</span></span></th>
             <th>Auto-Accepted</th>
             <th>CN Reviewed</th>
           </tr>
@@ -137,15 +141,16 @@ function finalAlertTs(orderDate, i) {
   return `${date}, ${h}:${pad(base.getMinutes())} ${ampm} PDT`;
 }
 
-// Indices of rows with no allergen (empty cell)
-const noAllergen = new Set([1, 3, 5, 9, 11, 15, 19]);
-// Indices where final alert has been sent but vendor has not yet confirmed
-const finalAlertSent = new Set([2, 7, 13]);
+// GRP orders that happen to have no allergen customers (empty cell)
+const noAllergen = new Set([5, 9, 11, 15, 19]);
+// GRP order rows where final alert has been sent but vendor has not yet confirmed
+const finalAlertSent = new Set([7, 13]);
 
 const tbody = document.getElementById("rows");
 rows.forEach((r, i) => {
   const tr = document.createElement("tr");
-  const allergenCell = noAllergen.has(i)
+  const isGrp = r[0].includes("GRP");
+  const allergenCell = !isGrp || noAllergen.has(i)
     ? `<td></td>`
     : finalAlertSent.has(i)
       ? `<td class="final-alert"><strong>Final Alert Sent</strong><span class="ts">${finalAlertTs(r[1], i)}</span></td>`
@@ -162,6 +167,19 @@ rows.forEach((r, i) => {
     <td></td>
   `;
   tbody.appendChild(tr);
+});
+
+document.getElementById("statusFilter").addEventListener("change", function() {
+  const val = this.value;
+  document.querySelectorAll("#rows tr").forEach(tr => {
+    const cell = tr.querySelector("td:nth-child(7)");
+    const hasConfirmed = cell && cell.classList.contains("allergen-log");
+    const hasFinal = cell && cell.classList.contains("final-alert");
+    let show = true;
+    if (val === "allergen-confirmed") show = hasConfirmed;
+    else if (val === "allergen-final") show = hasFinal;
+    tr.style.display = show ? "" : "none";
+  });
 });
 </script>
 </body>
