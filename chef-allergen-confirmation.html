@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HUNGRY Chef — Allergen Alert Confirmations</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; color: #333; background: #eff1f6; }
+  .layout { display: flex; min-height: 100vh; }
+
+  /* ── Chef Dashboard Sidebar ── */
+  .sidebar { width: 240px; background: linear-gradient(180deg, #e8503a 0%, #d04060 100%); color: #fff; flex-shrink: 0; display: flex; flex-direction: column; }
+  .sidebar-logo { padding: 28px 20px 22px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.15); margin-bottom: 8px; }
+  .logo-box { display: inline-flex; align-items: center; justify-content: center; border: 2.5px solid rgba(255,255,255,0.85); border-radius: 12px; width: 48px; height: 48px; font-size: 22px; font-weight: 900; margin-bottom: 10px; }
+  .logo-wordmark { font-size: 12px; font-weight: 700; letter-spacing: 4px; display: block; }
+  .sidebar-nav { flex: 1; padding: 4px 0; }
+  .nav-item { display: flex; align-items: center; gap: 14px; padding: 13px 20px; color: rgba(255,255,255,0.92); text-decoration: none; font-size: 14px; font-weight: 600; transition: background .12s; }
+  .nav-item.active { background: rgba(255,255,255,0.94); color: #1c1c1c; margin: 4px 10px; border-radius: 8px; padding: 12px 14px; }
+  .nav-icon { width: 22px; text-align: center; flex-shrink: 0; }
+
+  /* ── Main ── */
+  .main { flex: 1; padding: 36px 44px; background: #eff1f6; }
+  .page-eyebrow { font-size: 11px; font-weight: 700; color: #aaa; letter-spacing: .8px; text-transform: uppercase; margin-bottom: 6px; }
+  .page-title { font-size: 18px; font-weight: 700; color: #222; margin-bottom: 4px; }
+  .page-subtitle { font-size: 13px; color: #888; margin-bottom: 26px; }
+  .content-box { background: #fff; border-radius: 6px; padding: 28px 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #eff1f6; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #555; border-bottom: 1px solid #ddd; white-space: nowrap; }
+  td { padding: 11px 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+
+  /* ── Allergen tags ── */
+  .allergen-tag { display: inline-block; font-size: 11px; background: #f3f4f6; color: #374151; border-radius: 4px; padding: 2px 7px; margin: 1px 2px 1px 0; }
+  .allergen-more { font-size: 11px; color: #6B7280; font-style: italic; }
+
+  /* ── Item count ── */
+  .item-count { font-size: 12px; color: #666; }
+
+  /* ── Status pills ── */
+  .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; letter-spacing: .3px; white-space: nowrap; }
+  .pill-pending   { background: #F3F4F6; color: #374151; }
+  .pill-confirmed { background: #DCFCE7; color: #166534; }
+  .pill-cannot    { background: #FEE2E2; color: #991B1B; }
+
+  /* ── Action ── */
+  .btn-review { background: #007cc1; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn-review:hover { background: #006ba8; }
+  .action-confirmed { font-size: 12px; color: #166534; font-weight: 600; }
+  .action-cannot    { font-size: 12px; color: #777; }
+
+  /* ── Modal ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 2000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); width: 580px; max-width: 94vw; max-height: 90vh; overflow-y: auto; }
+
+  .modal-header { padding: 22px 26px 18px; border-bottom: 1px solid #eee; }
+  .modal-header h2 { font-size: 15px; font-weight: 700; color: #222; line-height: 1.4; }
+  .modal-header p  { font-size: 12px; color: #888; margin-top: 4px; display: flex; gap: 6px; align-items: center; }
+  .modal-meta-sep  { color: #ddd; }
+
+  .modal-body { padding: 22px 26px; }
+  .modal-section-label { font-size: 11px; font-weight: 700; color: #777; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 10px; }
+
+  /* Items table */
+  .modal-items-table { width: 100%; border-collapse: collapse; margin-bottom: 2px; }
+  .modal-items-table thead th { font-size: 11px; font-weight: 700; color: #777; letter-spacing: .5px; text-transform: uppercase; padding: 0 14px 8px 0; text-align: left; border-bottom: 1px solid #e5e7eb; }
+  .modal-items-table thead th:last-child { padding-right: 0; }
+  .modal-items-table tbody td { font-size: 13px; padding: 9px 14px 9px 0; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  .modal-items-table tbody td:last-child { padding-right: 0; }
+  .modal-items-table tbody tr:last-child td { border-bottom: none; }
+  .modal-items-table tbody td:first-child { font-weight: 500; color: #333; }
+
+  .modal-divider { border: none; border-top: 1px solid #eee; margin: 20px 0; }
+
+  /* Response options */
+  .modal-radio-group { display: flex; flex-direction: column; gap: 10px; }
+  .modal-radio-card { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 6px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .modal-radio-card:hover { border-color: #007cc1; }
+  .modal-radio-card.selected { border-color: #007cc1; background: #f0f7fc; }
+  .modal-radio-card input[type=radio] { margin-top: 2px; accent-color: #007cc1; flex-shrink: 0; }
+  .modal-radio-card span { font-size: 13px; font-weight: 500; color: #333; line-height: 1.4; }
+
+  /* Cannot accommodate item selection */
+  .modal-cannot-section { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px 16px; margin-top: 12px; display: none; }
+  .modal-cannot-section.visible { display: block; }
+  .modal-cannot-label { font-size: 11px; font-weight: 700; color: #777; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 10px; }
+  .modal-check-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 13px; color: #333; cursor: pointer; }
+  .modal-check-row:not(:last-child) { border-bottom: 1px solid #efefef; }
+  .modal-check-row input[type=checkbox] { accent-color: #007cc1; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+
+  /* Footer */
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 26px; border-top: 1px solid #eee; align-items: center; }
+  .modal-error { font-size: 12px; color: #dc2626; margin-right: auto; display: none; }
+  .modal-error.visible { display: block; }
+  .btn-cancel { background: none; border: 1px solid #ccc; color: #555; border-radius: 6px; padding: 7px 16px; font-size: 13px; cursor: pointer; }
+  .btn-cancel:hover { background: #f5f5f5; }
+  .btn-submit { background: #007cc1; color: #fff; border: none; border-radius: 6px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-submit:hover { background: #006ba8; }
+
+  /* ── Tooltip ── */
+  #tooltip { display: none; position: fixed; background: #333; color: #fff; font-size: 12px; font-weight: 400; line-height: 1.6; padding: 12px 14px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 9999; max-width: 300px; pointer-events: none; }
+  #tooltip::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); border: 6px solid transparent; }
+  #tooltip.above::after { top: 100%; border-top-color: #333; }
+  #tooltip.below::after { bottom: 100%; border-bottom-color: #333; }
+  .tooltip-icon { color: #999; cursor: pointer; font-size: 12px; margin-left: 4px; }
+</style>
+</head>
+<body>
+
+<div id="tooltip"></div>
+
+<!-- ── Modal ── -->
+<div id="reviewModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle"></h2>
+      <p id="modalMeta"></p>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section-label">Allergen Alert Items</div>
+      <table class="modal-items-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Allergen Alert</th>
+          </tr>
+        </thead>
+        <tbody id="modalItems"></tbody>
+      </table>
+      <hr class="modal-divider">
+      <div class="modal-section-label" style="margin-bottom:12px;">Your Response</div>
+      <div class="modal-radio-group">
+        <label class="modal-radio-card" id="cardAccom">
+          <input type="radio" name="accommodate" value="yes" id="radioAccom">
+          <span>I can accommodate all allergen alerts for this order</span>
+        </label>
+        <label class="modal-radio-card" id="cardCannot">
+          <input type="radio" name="accommodate" value="no" id="radioCannot">
+          <span>I cannot accommodate one or more allergen alerts</span>
+        </label>
+      </div>
+      <div id="cannotSection" class="modal-cannot-section">
+        <div class="modal-cannot-label">Select items you cannot accommodate</div>
+        <div id="cannotItems"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span class="modal-error" id="modalError">Please select a response before submitting.</span>
+      <button class="btn-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-submit" id="modalSubmit">Submit Response</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-box">H</div>
+      <span class="logo-wordmark">HUNGRY</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a class="nav-item active" href="#"><span class="nav-icon">⚠</span>Allergen Alerts</a>
+    </nav>
+  </aside>
+
+  <!-- ── Main Content ── -->
+  <main class="main">
+    <div class="page-eyebrow">Burma Classic SF</div>
+    <div class="page-title">Allergen Alert Confirmations</div>
+    <div class="page-subtitle" id="pageSubtitle"></div>
+
+    <div class="content-box">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Order #</th>
+              <th>Pickup Time</th>
+              <th>Allergen Alert(s)</th>
+              <th>Items with Alert</th>
+              <th>Status <span class="tooltip-icon" data-tooltip="Pending: awaiting your review. Confirmed: you have confirmed you can accommodate all allergen alerts for this order. Cannot Accommodate: you flagged that one or more items in this order cannot be safely prepared — this does not mean the full order, only the specific items you selected. Our team has been notified.">ⓘ</span></th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Page subtitle ──
+document.getElementById('pageSubtitle').textContent =
+  'Group orders with allergen alerts for Tuesday, April 14, 2026';
+
+// ── Allergen tags — max 3 then "+ N more" ──
+function allergenTags(str) {
+  const items = str.split(',').map(s => s.trim());
+  const shown = items.slice(0, 3);
+  const rest  = items.length - 3;
+  let html = shown.map(a => `<span class="allergen-tag">${a}</span>`).join('');
+  if (rest > 0) html += ` <span class="allergen-more">+${rest} more</span>`;
+  return html;
+}
+
+// ── Data ──
+const orders = [
+  {
+    id: "GRPSFO10060", pickupTime: "11:30 AM", allergens: "Peanuts, Dairy",
+    itemCount: 1, status: "confirmed",
+    items: [
+      { item: "Mohinga Noodle Soup",  allergen: "Peanuts" },
+      { item: "Rainbow Salad",        allergen: "Dairy"   }
+    ]
+  },
+  {
+    id: "GRPSFO10070", pickupTime: "12:00 PM", allergens: "Gluten",
+    itemCount: 2, status: "pending",
+    items: [
+      { item: "Chicken Caesar Wrap",  allergen: "Gluten" },
+      { item: "Sourdough Grain Bowl", allergen: "Gluten" }
+    ]
+  },
+  {
+    id: "GRPSFO10092", pickupTime: "12:30 PM", allergens: "Shellfish, Soy, Gluten",
+    itemCount: 3, status: "pending",
+    items: [
+      { item: "Tea Leaf Salad",       allergen: "Shellfish" },
+      { item: "Coconut Noodles",      allergen: "Soy"       },
+      { item: "Garlic Fried Rice",    allergen: "Gluten"    }
+    ]
+  },
+  {
+    id: "GRPSFO10095", pickupTime: "1:00 PM", allergens: "Peanuts",
+    itemCount: 1, status: "cannot",
+    items: [
+      { item: "Tea Leaf Salad",       allergen: "Peanuts" }
+    ]
+  },
+];
+
+// ── Render table ──
+function statusPill(status) {
+  if (status === 'pending')   return `<span class="pill pill-pending">Pending</span>`;
+  if (status === 'confirmed') return `<span class="pill pill-confirmed">Confirmed</span>`;
+  if (status === 'cannot')    return `<span class="pill pill-cannot">Cannot Accommodate</span>`;
+}
+
+function actionCell(order, idx) {
+  if (order.status === 'pending')   return `<button class="btn-review" data-idx="${idx}">Review Allergen Alerts</button>`;
+  if (order.status === 'confirmed') return `<span class="action-confirmed">✓ Allergen alerts confirmed</span>`;
+  if (order.status === 'cannot')    return `<span class="action-cannot">Response logged</span>`;
+}
+
+const tbody = document.getElementById('rows');
+orders.forEach((order, idx) => {
+  const tr = document.createElement('tr');
+  tr.dataset.status = order.status;
+  tr.innerHTML = `
+    <td>${order.id}</td>
+    <td>${order.pickupTime}</td>
+    <td>${allergenTags(order.allergens)}</td>
+    <td class="item-count">${order.itemCount} ${order.itemCount === 1 ? 'item' : 'items'}</td>
+    <td>${statusPill(order.status)}</td>
+    <td>${actionCell(order, idx)}</td>
+  `;
+  tbody.appendChild(tr);
+});
+
+// ── Modal ──
+let activeRow   = null;
+let activeOrder = null;
+
+function openModal(order, row) {
+  activeRow   = row;
+  activeOrder = order;
+
+  document.getElementById('modalTitle').textContent =
+    `Allergen Alerts — Order #${order.id}`;
+  document.getElementById('modalMeta').innerHTML =
+    `<span>Pickup: ${order.pickupTime}</span><span class="modal-meta-sep">·</span><span>Tuesday, April 14, 2026</span>`;
+
+  // Render items
+  const itemsEl   = document.getElementById('modalItems');
+  const cannotEl  = document.getElementById('cannotItems');
+  itemsEl.innerHTML  = '';
+  cannotEl.innerHTML = '';
+
+  order.items.forEach((item, i) => {
+    itemsEl.innerHTML += `
+      <tr>
+        <td>${item.item}</td>
+        <td><span class="allergen-tag">${item.allergen}</span></td>
+      </tr>`;
+    cannotEl.innerHTML += `
+      <label class="modal-check-row">
+        <input type="checkbox" name="cannot_item" value="${i}">
+        <span>${item.item}</span>
+      </label>`;
+  });
+
+  // Reset state
+  document.getElementById('radioAccom').checked  = false;
+  document.getElementById('radioCannot').checked = false;
+  document.getElementById('cardAccom').classList.remove('selected');
+  document.getElementById('cardCannot').classList.remove('selected');
+  document.getElementById('cannotSection').classList.remove('visible');
+  document.getElementById('modalError').classList.remove('visible');
+
+  document.getElementById('reviewModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('reviewModal').classList.remove('open');
+  activeRow   = null;
+  activeOrder = null;
+}
+
+// Open via event delegation
+tbody.addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-review');
+  if (!btn) return;
+  const idx = parseInt(btn.dataset.idx, 10);
+  openModal(orders[idx], btn.closest('tr'));
+});
+
+// Close on overlay click or Cancel
+document.getElementById('reviewModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.getElementById('modalCancel').addEventListener('click', closeModal);
+
+// Radio card highlight + cannot section toggle
+document.querySelectorAll('input[name="accommodate"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    document.getElementById('cardAccom').classList.toggle('selected',  document.getElementById('radioAccom').checked);
+    document.getElementById('cardCannot').classList.toggle('selected', document.getElementById('radioCannot').checked);
+    document.getElementById('cannotSection').classList.toggle('visible', this.value === 'no');
+    document.getElementById('modalError').classList.remove('visible');
+  });
+});
+
+// ── Tooltip ──
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('.tooltip-icon[data-tooltip]').forEach(icon => {
+  icon.addEventListener('mouseenter', function() {
+    tooltip.textContent = this.dataset.tooltip;
+    tooltip.style.display = 'block';
+    const rect = this.getBoundingClientRect();
+    const tw  = 300;
+    const th  = tooltip.offsetHeight;
+    let left  = rect.left + rect.width / 2 - tw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+    tooltip.style.width = tw + 'px';
+    tooltip.style.left  = left + 'px';
+    // Flip below if not enough space above
+    if (rect.top < th + 16) {
+      tooltip.style.top = (rect.bottom + 12 + window.scrollY) + 'px';
+      tooltip.className = 'below';
+    } else {
+      tooltip.style.top = (rect.top - th - 12 + window.scrollY) + 'px';
+      tooltip.className = 'above';
+    }
+  });
+  icon.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+});
+
+// Submit
+document.getElementById('modalSubmit').addEventListener('click', function() {
+  const choice = document.querySelector('input[name="accommodate"]:checked');
+  if (!choice) {
+    document.getElementById('modalError').classList.add('visible');
+    return;
+  }
+
+  if (choice.value === 'yes') {
+    activeRow.dataset.status    = 'confirmed';
+    activeRow.cells[4].innerHTML = `<span class="pill pill-confirmed">Confirmed</span>`;
+    activeRow.cells[5].innerHTML = `<span class="action-confirmed">✓ Allergen alerts confirmed</span>`;
+  } else {
+    activeRow.dataset.status    = 'cannot';
+    activeRow.cells[4].innerHTML = `<span class="pill pill-cannot">Cannot Accommodate</span>`;
+    activeRow.cells[5].innerHTML = `<span class="action-cannot">Response logged</span>`;
+  }
+
+  closeModal();
+});
+</script>
+</body>
+</html>
