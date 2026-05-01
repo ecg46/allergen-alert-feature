@@ -32,12 +32,11 @@
   .tooltip-text { display: none; position: absolute; bottom: calc(100% + 10px); left: 50%; transform: translateX(-50%); width: 320px; background: #333; color: #fff; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; line-height: 1.5; padding: 12px 14px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 100; }
   .tooltip-text::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #333; }
   .tooltip-icon:hover .tooltip-text, .tooltip-icon:focus .tooltip-text { display: block; }
-  .allergen-log { color: #555; font-size: 12px; }
-  .allergen-log strong { color: #2d8a3e; font-weight: 600; display: block; margin-bottom: 2px; }
-  .allergen-log .ts { color: #888; font-size: 11px; font-family: "SF Mono", Consolas, monospace; }
-  .final-alert { color: #555; font-size: 12px; }
-  .final-alert strong { color: #D97706; font-weight: 600; display: block; margin-bottom: 2px; }
-  .final-alert .ts { color: #888; font-size: 11px; font-family: "SF Mono", Consolas, monospace; }
+  .allergen-pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; letter-spacing: .3px; }
+  .allergen-log .allergen-pill { background: #DCFCE7; color: #166534; }
+  .final-alert .allergen-pill { background: #FEF3C7; color: #92400E; }
+  .allergen-pending .allergen-pill { background: #F3F4F6; color: #374151; }
+  .cannot-accommodate .allergen-pill { background: #FEE2E2; color: #991B1B; }
 </style>
 </head>
 <body>
@@ -48,6 +47,7 @@
     <a href="#">Menu Item Updates</a>
     <a href="#">Chef Schedule Updates</a>
     <a href="#">Chef Confirmations</a>
+    <a href="allergen-alerts-tab.html">Allergen Alerts</a>
     <a href="#">Chef Directory</a>
     <a href="#">Vendor / Client Map</a>
   </aside>
@@ -69,8 +69,9 @@
           <label>FILTER ORDER STATUS</label>
           <select id="statusFilter">
             <option value="">No Filter</option>
-            <option value="allergen-confirmed">Allergen Alert – Confirmed</option>
+            <option value="allergen-pending">Allergen Alert – Pending</option>
             <option value="allergen-final">Allergen Alert – Final Alert Sent</option>
+            <option value="allergen-cannot">Allergen Alert – Cannot Accommodate</option>
           </select>
         </div>
       </div>
@@ -83,7 +84,7 @@
             <th>Chef Email</th>
             <th>Chef Phone</th>
             <th>Accepted Order? ⇅</th>
-            <th class="allergen-th">Allergen Alert <span class="tooltip-icon" tabindex="0">ⓘ<span class="tooltip-text">Only appears on group orders that include customers with allergen alerts on their profile. <strong style="color:#7dd3b0">Confirmed</strong>: the vendor acknowledged the alert at that time. <strong style="color:#fbbf24">Final Alert Sent</strong>: a final reminder has been sent because the vendor had not yet confirmed.</span></span></th>
+            <th class="allergen-th">Allergen Alert <span class="tooltip-icon" tabindex="0">ⓘ<span class="tooltip-text">Only shows on group orders where one or more diners have an allergen alert. Only displays when action may be needed — no value means the order is confirmed or has no allergen alerts. <strong style="color:#9CA3AF">Pending</strong>: cutoff reached, awaiting vendor confirmation. <strong style="color:#fbbf24">Final Alert Sent</strong>: final reminder sent, vendor has not yet confirmed. <strong style="color:#FCA5A5">Cannot Accommodate</strong>: vendor flagged they cannot accommodate one or more allergens. See the Allergen Alerts tab for full details.</span></span></th>
             <th>Auto-Accepted</th>
             <th>CN Reviewed</th>
           </tr>
@@ -141,20 +142,31 @@ function finalAlertTs(orderDate, i) {
   return `${date}, ${h}:${pad(base.getMinutes())} ${ampm} PDT`;
 }
 
-// GRP orders that happen to have no allergen customers (empty cell)
+// GRP orders with no allergen customers — empty cell
 const noAllergen = new Set([5, 9, 11, 15, 19]);
-// GRP order rows where final alert has been sent but vendor has not yet confirmed
+// GRP order rows — final alert sent, vendor has not confirmed
 const finalAlertSent = new Set([7, 13]);
+// GRP order rows — vendor flagged cannot accommodate
+const cannotAccommodate = new Set([6, 16]);
+// GRP order rows — pending (cutoff reached, awaiting response)
+const pending = new Set([8, 12]);
 
 const tbody = document.getElementById("rows");
 rows.forEach((r, i) => {
   const tr = document.createElement("tr");
   const isGrp = r[0].includes("GRP");
-  const allergenCell = !isGrp || noAllergen.has(i)
-    ? `<td></td>`
-    : finalAlertSent.has(i)
-      ? `<td class="final-alert"><strong>Final Alert Sent</strong><span class="ts">${finalAlertTs(r[1], i)}</span></td>`
-      : `<td class="allergen-log"><strong>Confirmed</strong><span class="ts">${confirmTs(r[1], i)}</span></td>`;
+  let allergenCell;
+  if (!isGrp || noAllergen.has(i)) {
+    allergenCell = `<td></td>`;
+  } else if (cannotAccommodate.has(i)) {
+    allergenCell = `<td class="cannot-accommodate"><span class="allergen-pill">Cannot Accommodate</span></td>`;
+  } else if (finalAlertSent.has(i)) {
+    allergenCell = `<td class="final-alert"><span class="allergen-pill">Final Alert Sent</span></td>`;
+  } else if (pending.has(i)) {
+    allergenCell = `<td class="allergen-pending"><span class="allergen-pill">Pending</span></td>`;
+  } else {
+    allergenCell = `<td></td>`;
+  }
   tr.innerHTML = `
     <td>${r[0]}</td>
     <td>${r[1]}</td>
@@ -173,11 +185,13 @@ document.getElementById("statusFilter").addEventListener("change", function() {
   const val = this.value;
   document.querySelectorAll("#rows tr").forEach(tr => {
     const cell = tr.querySelector("td:nth-child(7)");
-    const hasConfirmed = cell && cell.classList.contains("allergen-log");
     const hasFinal = cell && cell.classList.contains("final-alert");
+    const hasPending = cell && cell.classList.contains("allergen-pending");
+    const hasCannot = cell && cell.classList.contains("cannot-accommodate");
     let show = true;
-    if (val === "allergen-confirmed") show = hasConfirmed;
-    else if (val === "allergen-final") show = hasFinal;
+    if (val === "allergen-final") show = hasFinal;
+    else if (val === "allergen-pending") show = hasPending;
+    else if (val === "allergen-cannot") show = hasCannot;
     tr.style.display = show ? "" : "none";
   });
 });
