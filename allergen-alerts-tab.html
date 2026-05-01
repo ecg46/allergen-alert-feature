@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Chef Network — Allergen Alerts</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; color: #333; background: #eff1f6; }
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar { width: 220px; background: -webkit-linear-gradient(top, rgb(255, 98, 77) 0%, rgb(238, 52, 109) 100%); color: #fff; padding: 20px 0; flex-shrink: 0; }
+  .sidebar h2 { font-size: 15px; padding: 0 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.25); }
+  .sidebar a { display: block; padding: 14px 20px; color: #ddd; text-decoration: none; font-size: 13px; }
+  .sidebar a.active { background: rgba(255,255,255,0.2); color: #fff; font-weight: 600; position: relative; }
+  .sidebar a.active::after { content: ""; position: absolute; right: -10px; top: 50%; transform: translateY(-50%); border: 10px solid transparent; border-left-color: #ff4f2e; }
+  .main { flex: 1; padding: 30px 40px; background: #eff1f6; overflow: hidden; }
+  .topbar { display: flex; justify-content: flex-end; gap: 30px; align-items: center; margin-bottom: 20px; font-size: 13px; }
+  .topbar .bug { color: #3aa3a3; }
+  .content-box { background: #ffffff; border-radius: 6px; padding: 28px 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  h1 { color: #ff4f2e; font-size: 14px; letter-spacing: 1px; padding-bottom: 10px; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
+
+  /* Filters */
+  .filters { display: flex; gap: 40px; margin-bottom: 20px; align-items: flex-end; flex-wrap: wrap; }
+  .filter-group label { display: block; font-size: 11px; font-weight: 700; color: #666; letter-spacing: .5px; margin-bottom: 6px; }
+  select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 3px; background: #fff; font-size: 13px; min-width: 200px; }
+  .date-range { font-size: 14px; color: #333; align-self: center; white-space: nowrap; }
+  .date-range .arrow { color: #888; cursor: pointer; margin: 0 8px; user-select: none; }
+  .date-range .arrow:hover { color: #333; }
+
+  /* Table wrapper — allows thead tooltip to overflow */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+  thead { position: relative; z-index: 10; }
+  th { background: #eff1f6; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: #555; border-bottom: 1px solid #ddd; white-space: nowrap; position: relative; overflow: visible; }
+  td { padding: 10px 12px; border-bottom: 1px solid #eee; vertical-align: middle; }
+  tr:hover { background: #fafafa; }
+  .sort-arrow { color: #aaa; margin-left: 4px; cursor: pointer; }
+
+  /* Status pills */
+  .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; letter-spacing: .3px; white-space: nowrap; }
+  .pill-pending   { background: #F3F4F6; color: #374151; }
+  .pill-manual    { background: #EFF6FF; color: #1D4ED8; }
+  .pill-final     { background: #FEF3C7; color: #92400E; }
+  .pill-confirmed { background: #DCFCE7; color: #166534; }
+  .pill-cannot    { background: #FEE2E2; color: #991B1B; }
+
+  /* Manual flag */
+  .manual-flag { display: inline-block; font-size: 10px; font-weight: 700; background: #DBEAFE; color: #1E40AF; border: 1px solid #BFDBFE; border-radius: 4px; padding: 1px 6px; margin-left: 6px; letter-spacing: .3px; vertical-align: middle; }
+
+  /* Allergen tags */
+  .allergen-tag { display: inline-block; font-size: 11px; background: #f3f4f6; color: #374151; border-radius: 4px; padding: 2px 7px; margin: 1px 2px 1px 0; }
+  .allergen-more { font-size: 11px; color: #6B7280; font-style: italic; }
+
+  /* Confirmation source */
+  .source { font-size: 11px; color: #777; }
+  .source .method { font-weight: 600; color: #555; display: block; }
+
+  /* Action buttons */
+  .btn-log  { background: #007cc1; color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn-log:hover  { background: #006ba8; }
+  .btn-view { background: none; color: #007cc1; border: 1px solid #007cc1; border-radius: 6px; padding: 4px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn-view:hover { background: #f0f7fc; }
+
+  /* Tooltip — JS-positioned, appended to body */
+  #tooltip { display: none; position: fixed; background: #333; color: #fff; font-size: 12px; font-weight: 400; line-height: 1.5; padding: 12px 14px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 9999; max-width: 320px; pointer-events: none; }
+  #tooltip::after { content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #333; }
+  .tooltip-icon { color: #999; cursor: pointer; font-size: 13px; margin-left: 4px; }
+
+  /* ── Manual Confirmation Modal ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 2000; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); width: 560px; max-width: 94vw; max-height: 90vh; overflow-y: auto; }
+  .modal-header { padding: 22px 26px 16px; border-bottom: 1px solid #eee; }
+  .modal-header h2 { font-size: 14px; font-weight: 700; color: #333; line-height: 1.5; }
+  .modal-header p  { font-size: 12px; color: #888; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+  .modal-meta-client { font-weight: 700; color: #555; }
+  .modal-meta-sep { color: #ccc; }
+  .modal-chef-contact { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0; }
+  .modal-chef-contact-label { font-size: 10px; font-weight: 700; color: #aaa; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 5px; }
+  .modal-chef-contact-row { display: flex; gap: 18px; flex-wrap: wrap; }
+  .modal-chef-contact-row span { font-size: 12px; color: #555; display: flex; align-items: center; gap: 5px; }
+  .contact-icon { font-size: 11px; color: #aaa; }
+  .modal-body { padding: 22px 26px; }
+  .modal-section-label { font-size: 11px; font-weight: 700; color: #777; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 10px; }
+  .modal-items-table { width: 100%; border-collapse: collapse; }
+  .modal-items-table thead th { font-size: 11px; font-weight: 700; color: #777; letter-spacing: .5px; text-transform: uppercase; padding: 0 14px 8px 0; text-align: left; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+  .modal-items-table thead th:last-child { padding-right: 0; }
+  .modal-items-table tbody td { font-size: 13px; padding: 9px 14px 9px 0; border-bottom: 1px solid #f0f0f0; vertical-align: middle; color: #333; }
+  .modal-items-table tbody td:last-child { padding-right: 0; color: #555; }
+  .modal-items-table tbody tr:last-child td { border-bottom: none; }
+  .modal-items-table tbody td:first-child { font-weight: 500; }
+  .qty-badge { display: inline-block; font-size: 11px; font-weight: 700; color: #555; background: #e5e7eb; border-radius: 4px; padding: 1px 5px; margin-right: 5px; vertical-align: middle; }
+  .modal-divider { border: none; border-top: 1px solid #eee; margin: 20px 0; }
+  .modal-radio-group { display: flex; flex-direction: column; gap: 10px; }
+  .modal-radio-card { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border: 2px solid #e5e7eb; border-radius: 6px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .modal-radio-card:hover { border-color: #007cc1; }
+  .modal-radio-card.selected { border-color: #007cc1; background: #f0f7fc; }
+  .modal-radio-card input[type=radio] { margin-top: 1px; accent-color: #007cc1; flex-shrink: 0; }
+  .modal-radio-card span { font-size: 13px; font-weight: 500; color: #333; line-height: 1.4; }
+  .modal-cannot-section { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 14px 16px; margin-top: 12px; display: none; }
+  .modal-cannot-section.visible { display: block; }
+  .modal-cannot-label { font-size: 11px; font-weight: 700; color: #777; letter-spacing: .5px; text-transform: uppercase; margin-bottom: 10px; }
+  .modal-check-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 13px; color: #333; cursor: pointer; }
+  .modal-check-row:not(:last-child) { border-bottom: 1px solid #efefef; }
+  .modal-check-row input[type=checkbox] { accent-color: #007cc1; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
+  .modal-check-diner { font-size: 12px; color: #888; margin-left: auto; white-space: nowrap; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 26px; border-top: 1px solid #eee; }
+  .btn-cancel { background: none; border: 1px solid #ccc; color: #555; border-radius: 6px; padding: 7px 16px; font-size: 13px; cursor: pointer; }
+  .btn-cancel:hover { background: #f5f5f5; }
+  .btn-submit { background: #007cc1; color: #fff; border: none; border-radius: 6px; padding: 7px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .btn-submit:hover { background: #006ba8; }
+  .modal-error { font-size: 12px; color: #dc2626; margin-right: auto; align-self: center; display: none; }
+  .modal-error.visible { display: block; }
+</style>
+</head>
+<body>
+
+<div id="tooltip"></div>
+
+<!-- ── Manual Confirmation Modal ── -->
+<div id="confirmModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle"></h2>
+      <p id="modalMeta"></p>
+      <div class="modal-chef-contact" id="modalContact"></div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section-label">Allergen Alert Items</div>
+      <table class="modal-items-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Allergen Alert</th>
+            <th>Group Order User(s)</th>
+          </tr>
+        </thead>
+        <tbody id="modalItems"></tbody>
+      </table>
+      <hr class="modal-divider">
+      <div class="modal-section-label" style="margin-bottom:12px;">Vendor Response</div>
+      <div class="modal-radio-group">
+        <label class="modal-radio-card" id="cardAccom">
+          <input type="radio" name="accommodate" value="yes" id="radioAccom">
+          <span>Chef can accommodate all allergen alerts for this order</span>
+        </label>
+        <label class="modal-radio-card" id="cardCannot">
+          <input type="radio" name="accommodate" value="no" id="radioCannot">
+          <span>Chef cannot accommodate one or more allergen alerts</span>
+        </label>
+      </div>
+      <div id="cannotSection" class="modal-cannot-section">
+        <div class="modal-cannot-label">Select items that cannot be accommodated</div>
+        <div id="cannotItems"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span class="modal-error" id="modalError">Please select a response before submitting.</span>
+      <button class="btn-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-submit" id="modalSubmit">Submit Response</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── View Log Modal ── -->
+<div id="viewModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="viewModalTitle"></h2>
+      <p id="viewModalMeta"></p>
+      <div class="modal-chef-contact" id="viewModalContact"></div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section-label" id="viewModalSectionLabel">Items</div>
+      <table class="modal-items-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Allergen Alert</th>
+            <th>Group Order User(s)</th>
+          </tr>
+        </thead>
+        <tbody id="viewModalItems"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" id="viewModalClose">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <h2>Chef Network</h2>
+    <a href="chef-network-v1.html">Chef Order Status</a>
+    <a href="#">Menu Item Updates</a>
+    <a href="#">Chef Schedule Updates</a>
+    <a href="#">Chef Confirmations</a>
+    <a href="#" class="active">Allergen Alerts</a>
+    <a href="#">Chef Directory</a>
+    <a href="#">Chef / Client Map</a>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <span class="bug">💬 New Request/Bug?</span>
+      <span>Estefania - San Francisco, CA (PDT) ▾</span>
+      <span>Menu ☰</span>
+    </div>
+    <div class="content-box">
+      <h1>ALLERGEN ALERTS</h1>
+      <div class="filters">
+        <div class="filter-group">
+          <label>HEADQUARTER</label>
+          <select><option>San Francisco, CA</option></select>
+        </div>
+        <div class="date-range">
+          <span class="arrow" id="prevWeek">◄</span>
+          <span id="weekLabel"></span>
+          <span class="arrow" id="nextWeek">►</span>
+        </div>
+        <div class="filter-group">
+          <label>FILTER BY STATUS</label>
+          <select id="statusFilter">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending — Awaiting Response</option>
+            <option value="manual">Pending — Manual Confirmation Required</option>
+            <option value="final">Final Alert Sent</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="cannot">Cannot Accommodate</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Order #</th>
+              <th>Chef <span class="sort-arrow">⇅</span></th>
+              <th>Delivery Date <span class="sort-arrow">⇅</span></th>
+              <th>Client</th>
+              <th>Allergen(s)</th>
+              <th>
+                Status
+                <span class="tooltip-icon"
+                  data-tooltip="Only orders with allergen alerts appear here. Pending: cutoff reached, awaiting vendor response. Manual: requires FP/OPS to confirm directly — no automated email sent. Final Alert Sent: final reminder sent, still no response. Confirmed: vendor confirmed they can accommodate. Cannot Accommodate: vendor flagged they cannot accommodate one or more allergens."
+                >ⓘ</span>
+              </th>
+              <th>Confirmed By</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ── Week selector ──
+const weekLabel = document.getElementById('weekLabel');
+let weekOffset = 0;
+
+function getWeekRange(offset) {
+  const now = new Date(2026, 3, 12); // April 12 2026 (Sun)
+  const start = new Date(now);
+  start.setDate(start.getDate() + offset * 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const fmtShort = d => d.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+  return `${fmtShort(start)} to ${fmt(end)}`;
+}
+
+function updateWeek() { weekLabel.textContent = getWeekRange(weekOffset); }
+document.getElementById('prevWeek').addEventListener('click', () => { weekOffset--; updateWeek(); });
+document.getElementById('nextWeek').addEventListener('click', () => { weekOffset++; updateWeek(); });
+updateWeek();
+
+// ── Allergen display — max 3 tags then "+ N more" ──
+function allergenTags(str) {
+  const items = str.split(',').map(s => s.trim());
+  const shown = items.slice(0, 3);
+  const rest = items.length - 3;
+  let html = shown.map(a => `<span class="allergen-tag">${a}</span>`).join('');
+  if (rest > 0) html += ` <span class="allergen-more">+ ${rest} more</span>`;
+  return html;
+}
+
+// ── Data ──
+const orders = [
+  { id: "GRPSFO10060", client: "Stripe",         vendor: "Burma Classic SF",               chefPhone: "(415) 555-0192", chefEmail: "orders@burmaclassicsf.com",    date: "04/14/2026", allergens: "Peanuts, Dairy",                     status: "confirmed", source: "email",    confirmedBy: null,           confirmedAt: "04/13/2026, 5:39 PM PDT" },
+  { id: "GRPSFO10064", client: "E2 Productions", vendor: "SSB Catering",                   chefPhone: "(415) 555-0147", chefEmail: "catering@ssbcatering.com",     date: "04/14/2026", allergens: "Gluten",                             status: "confirmed", source: "dashboard", confirmedBy: null,           confirmedAt: "04/13/2026, 6:02 PM PDT" },
+  { id: "GRPSFO10064", client: "E2 Productions", vendor: "jW Catering",                    chefPhone: "(415) 555-0283", chefEmail: "chef@jwcatering.com",          date: "04/14/2026", allergens: "Shellfish",                          status: "pending",   source: null,        confirmedBy: null,           confirmedAt: null },
+  { id: "GRPSFO10064", client: "E2 Productions", vendor: "Sumac Modern Street Food",       chefPhone: "(650) 555-0318", chefEmail: "orders@sumacstreetfood.com",   date: "04/14/2026", allergens: "Peanuts, Dairy, Gluten, Eggs",       status: "final",     source: null,        confirmedBy: null,           confirmedAt: null },
+  { id: "GRPSFO10064", client: "E2 Productions", vendor: "Erik's Deli Cafe - Foster City", chefPhone: "(650) 555-0076", chefEmail: "fc@eriksdeli.com",             date: "04/14/2026", allergens: "Dairy, Eggs",                        status: "cannot",    source: null,        confirmedBy: null,           confirmedAt: null,
+    cannotItems: [
+      { item: "Croissant Sandwich", allergen: "Dairy", diners: ["Sam L."] },
+      { item: "Egg Salad Wrap",     allergen: "Eggs",  diners: ["Sam L."] }
+    ]
+  },
+  { id: "GRPSFO10070", client: "The Office",     vendor: "Burma Classic SF",               chefPhone: "(415) 555-0192", chefEmail: "orders@burmaclassicsf.com",    date: "04/14/2026", allergens: "Gluten",                             status: "manual",    source: null,        confirmedBy: null,           confirmedAt: null,
+    items: [
+      { item: "Chicken Caesar Wrap",  allergen: "Gluten", diners: ["Marcus T.", "Priya K."] },
+      { item: "Sourdough Grain Bowl", allergen: "Gluten", diners: ["Devon R."]              }
+    ]
+  },
+  { id: "GRPSFO10076", client: "Airbnb",         vendor: "SSB Catering",                   chefPhone: "(415) 555-0147", chefEmail: "catering@ssbcatering.com",     date: "04/14/2026", allergens: "Peanuts",                            status: "confirmed", source: "manual",    confirmedBy: "Estefania C.", confirmedAt: "04/14/2026, 8:15 AM PDT" },
+  { id: "GRPSFO10076", client: "Airbnb",         vendor: "jW Catering",                    chefPhone: "(415) 555-0283", chefEmail: "chef@jwcatering.com",          date: "04/14/2026", allergens: "Soy",                                status: "pending",   source: null,        confirmedBy: null,           confirmedAt: null },
+  { id: "GRPSFO10076", client: "Airbnb",         vendor: "Sumac Modern Street Food",       chefPhone: "(650) 555-0318", chefEmail: "orders@sumacstreetfood.com",   date: "04/14/2026", allergens: "Shellfish, Allium, Peanuts, Gluten", status: "final",     source: null,        confirmedBy: null,           confirmedAt: null },
+  { id: "GRPSFO10081", client: "Lyft",           vendor: "Chick-fil-A - Foster City",      chefPhone: "(650) 555-0451", chefEmail: "fostersupport@cfafc.com",      date: "04/15/2026", allergens: "Peanuts",                            status: "manual",    source: null,        confirmedBy: null,           confirmedAt: null,
+    items: [
+      { item: "Spicy Deluxe Sandwich", allergen: "Peanuts", diners: ["Jordan M."] }
+    ]
+  },
+  { id: "GRPSFO10081", client: "Lyft",           vendor: "Erik's Deli Cafe - Foster City", chefPhone: "(650) 555-0076", chefEmail: "fc@eriksdeli.com",             date: "04/15/2026", allergens: "Dairy",                              status: "cannot",    source: null,        confirmedBy: null,           confirmedAt: null,
+    cannotItems: [
+      { item: "Mac & Cheese Bowl", allergen: "Dairy", diners: ["Alex P."] }
+    ]
+  },
+  { id: "GRPSFO10086", client: "GitHub",         vendor: "Poke Life",                      chefPhone: "(415) 555-0162", chefEmail: "hello@pokelifesf.com",         date: "04/15/2026", allergens: "Gluten, Soy",                        status: "confirmed", source: "email",     confirmedBy: null,           confirmedAt: "04/14/2026, 7:51 PM PDT" },
+  { id: "GRPSFO10086", client: "GitHub",         vendor: "Umami Express",                  chefPhone: "(415) 555-0399", chefEmail: "orders@umamiexpress.com",      date: "04/15/2026", allergens: "Shellfish",                          status: "pending",   source: null,        confirmedBy: null,           confirmedAt: null },
+];
+
+function sourceLabel(order) {
+  if (!order.source) return `<span class="source">—</span>`;
+  if (order.source === "email")     return `<span class="source"><span class="method">${order.vendor}</span>${order.confirmedAt}</span>`;
+  if (order.source === "dashboard") return `<span class="source"><span class="method">${order.vendor}</span>${order.confirmedAt}</span>`;
+  if (order.source === "manual")    return `<span class="source"><span class="method">Manual — ${order.confirmedBy}</span>${order.confirmedAt}</span>`;
+  return `<span class="source">—</span>`;
+}
+
+function statusCell(order) {
+  switch(order.status) {
+    case "pending":   return `<span class="pill pill-pending">Pending</span>`;
+    case "manual":    return `<span class="pill pill-manual">Pending</span><span class="manual-flag">MANUAL</span>`;
+    case "final":     return `<span class="pill pill-final">Final Alert Sent</span>`;
+    case "confirmed": return `<span class="pill pill-confirmed">Confirmed</span>`;
+    case "cannot":    return `<span class="pill pill-cannot">Cannot Accommodate</span>`;
+  }
+}
+
+function actionCell(order, idx) {
+  if (order.status === "manual") return `<button class="btn-log" data-order-index="${idx}">Manual Review</button>`;
+  if (order.status === "cannot" && order.cannotItems) return `<button class="btn-view" data-order-index="${idx}">View</button>`;
+  return `<span style="color:#bbb">—</span>`;
+}
+
+const tbody = document.getElementById("rows");
+orders.forEach((order, idx) => {
+  const tr = document.createElement("tr");
+  tr.dataset.status = order.status;
+  // Pre-load items for view modal
+  if (order.cannotItems) {
+    tr.dataset.viewItems   = JSON.stringify(order.cannotItems);
+    tr.dataset.viewLabel   = `Chef Response: Cannot Accommodate`;
+    tr.dataset.viewMeta    = `<span class="modal-meta-client">${order.client}</span><span class="modal-meta-sep">·</span>Delivery: ${order.date}`;
+    tr.dataset.chefPhone   = order.chefPhone;
+    tr.dataset.chefEmail   = order.chefEmail;
+    tr.dataset.chefName    = order.vendor;
+  }
+  tr.innerHTML = `
+    <td>${order.id}</td>
+    <td>${order.vendor}</td>
+    <td>${order.date}</td>
+    <td>${order.client}</td>
+    <td>${allergenTags(order.allergens)}</td>
+    <td>${statusCell(order)}</td>
+    <td>${sourceLabel(order)}</td>
+    <td>${actionCell(order, idx)}</td>
+  `;
+  tbody.appendChild(tr);
+});
+
+// ── Status filter ──
+document.getElementById("statusFilter").addEventListener("change", function() {
+  const val = this.value;
+  document.querySelectorAll("#rows tr").forEach(tr => {
+    tr.style.display = (!val || tr.dataset.status === val) ? "" : "none";
+  });
+});
+
+// ── Manual confirmation modal ──
+let activeRow   = null;
+let activeOrder = null;
+
+function openModal(order, row) {
+  activeRow   = row;
+  activeOrder = order;
+
+  document.getElementById('modalTitle').textContent =
+    `Manual Confirmation for Order #${order.id} — ${order.vendor}`;
+  document.getElementById('modalMeta').innerHTML =
+    `<span class="modal-meta-client">${order.client}</span><span class="modal-meta-sep">·</span>Delivery: ${order.date}`;
+  document.getElementById('modalContact').innerHTML =
+    contactHTML(order.chefPhone, order.chefEmail);
+
+  // Render item list
+  const itemsEl = document.getElementById('modalItems');
+  const cannotEl = document.getElementById('cannotItems');
+  itemsEl.innerHTML = '';
+  cannotEl.innerHTML = '';
+
+  (order.items || []).forEach((item, i) => {
+    const qty = item.diners.length;
+    const qtyBadge = qty > 1 ? `<span class="qty-badge">(${qty})</span> ` : '';
+    const dinerList = item.diners.join(', ');
+    itemsEl.innerHTML += `
+      <tr>
+        <td>${qtyBadge}${item.item}</td>
+        <td><span class="allergen-tag">${item.allergen}</span></td>
+        <td>${dinerList}</td>
+      </tr>`;
+    cannotEl.innerHTML += `
+      <label class="modal-check-row">
+        <input type="checkbox" name="cannot_item" value="${i}">
+        <span>${qtyBadge}${item.item}</span>
+        <span class="modal-check-diner">${dinerList}</span>
+      </label>`;
+  });
+
+  // Reset radio state
+  document.getElementById('radioAccom').checked = false;
+  document.getElementById('radioCannot').checked = false;
+  document.getElementById('cardAccom').classList.remove('selected');
+  document.getElementById('cardCannot').classList.remove('selected');
+  document.getElementById('cannotSection').classList.remove('visible');
+  document.getElementById('modalError').classList.remove('visible');
+
+  document.getElementById('confirmModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('confirmModal').classList.remove('open');
+  activeRow   = null;
+  activeOrder = null;
+}
+
+function contactHTML(phone, email) {
+  return `
+    <div class="modal-chef-contact-label">Chef Details</div>
+    <div class="modal-chef-contact-row">
+      <span><span class="contact-icon">☎</span>${phone}</span>
+      <span><span class="contact-icon">✉</span>${email}</span>
+    </div>`;
+}
+
+// Open via event delegation on tbody (handles dynamically rendered buttons)
+document.getElementById('rows').addEventListener('click', function(e) {
+  // Manual Review button
+  const logBtn = e.target.closest('.btn-log');
+  if (logBtn) {
+    const idx = parseInt(logBtn.dataset.orderIndex, 10);
+    openModal(orders[idx], logBtn.closest('tr'));
+    return;
+  }
+  // View button
+  const viewBtn = e.target.closest('.btn-view');
+  if (viewBtn) {
+    const tr    = viewBtn.closest('tr');
+    const items = JSON.parse(tr.dataset.viewItems || '[]');
+    const label = tr.dataset.viewLabel || 'Chef Response: Cannot Accommodate';
+    const meta  = tr.dataset.viewMeta  || '';
+    const phone = tr.dataset.chefPhone || '';
+    const email = tr.dataset.chefEmail || '';
+    const name  = tr.dataset.chefName  || '';
+    openViewModal(label, meta, items, phone, email, name);
+  }
+});
+
+// Close on overlay click or Cancel
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+document.getElementById('modalCancel').addEventListener('click', closeModal);
+
+// Radio card selection highlighting + cannot section toggle
+document.querySelectorAll('input[name="accommodate"]').forEach(radio => {
+  radio.addEventListener('change', function() {
+    document.getElementById('cardAccom').classList.toggle('selected', document.getElementById('radioAccom').checked);
+    document.getElementById('cardCannot').classList.toggle('selected', document.getElementById('radioCannot').checked);
+    document.getElementById('cannotSection').classList.toggle('visible', this.value === 'no');
+    document.getElementById('modalError').classList.remove('visible');
+  });
+});
+
+// Submit
+document.getElementById('modalSubmit').addEventListener('click', function() {
+  const choice = document.querySelector('input[name="accommodate"]:checked');
+  if (!choice) {
+    document.getElementById('modalError').classList.add('visible');
+    return;
+  }
+
+  const stamp = 'Estefania C.';
+  const ts    = '04/14/2026, 9:12 AM PDT';
+  const metaStr = `<span class="modal-meta-client">${activeOrder.client}</span><span class="modal-meta-sep">·</span>Delivery: ${activeOrder.date}`;
+
+  if (choice.value === 'yes') {
+    // Store all items for view log
+    activeRow.dataset.viewItems  = JSON.stringify(activeOrder.items || []);
+    activeRow.dataset.viewLabel  = `Confirmed — Order #${activeOrder.id} — ${activeOrder.vendor}`;
+    activeRow.dataset.viewMeta   = metaStr;
+    activeRow.dataset.chefPhone  = activeOrder.chefPhone;
+    activeRow.dataset.chefEmail  = activeOrder.chefEmail;
+    activeRow.dataset.chefName   = activeOrder.vendor;
+    activeRow.dataset.status      = 'confirmed';
+    activeRow.cells[5].innerHTML  = `<span class="pill pill-confirmed">Confirmed</span>`;
+    activeRow.cells[6].innerHTML  = `<span class="source"><span class="method">Manual — ${stamp}</span>${ts}</span>`;
+    activeRow.cells[7].innerHTML  = `<button class="btn-view">View</button>`;
+  } else {
+    // Capture only the checked items
+    const checked = [...document.querySelectorAll('input[name="cannot_item"]:checked')];
+    const cannotItems = checked.length
+      ? checked.map(cb => activeOrder.items[parseInt(cb.value)])
+      : (activeOrder.items || []);
+    activeRow.dataset.viewItems  = JSON.stringify(cannotItems);
+    activeRow.dataset.viewLabel  = `Chef Response: Cannot Accommodate`;
+    activeRow.dataset.viewMeta   = metaStr;
+    activeRow.dataset.chefPhone  = activeOrder.chefPhone;
+    activeRow.dataset.chefEmail  = activeOrder.chefEmail;
+    activeRow.dataset.chefName   = activeOrder.vendor;
+    activeRow.dataset.status      = 'cannot';
+    activeRow.cells[5].innerHTML  = `<span class="pill pill-cannot">Cannot Accommodate</span>`;
+    activeRow.cells[6].innerHTML  = `<span class="source"><span class="method">Manual — ${stamp}</span>${ts}</span>`;
+    activeRow.cells[7].innerHTML  = `<button class="btn-view">View</button>`;
+  }
+
+  closeModal();
+});
+
+// ── View modal ──
+function openViewModal(title, meta, items, phone, email, name) {
+  document.getElementById('viewModalTitle').textContent  = title;
+  document.getElementById('viewModalMeta').innerHTML     = meta;
+  document.getElementById('viewModalContact').innerHTML  =
+    (phone && email) ? contactHTML(phone, email) : '';
+
+  const tbody = document.getElementById('viewModalItems');
+  tbody.innerHTML = '';
+  items.forEach(item => {
+    const qty = item.diners.length;
+    const badge = qty > 1 ? `<span class="qty-badge">(${qty})</span> ` : '';
+    tbody.innerHTML += `
+      <tr>
+        <td>${badge}${item.item}</td>
+        <td><span class="allergen-tag">${item.allergen}</span></td>
+        <td>${item.diners.join(', ')}</td>
+      </tr>`;
+  });
+
+  document.getElementById('viewModal').classList.add('open');
+}
+
+document.getElementById('viewModalClose').addEventListener('click', () => {
+  document.getElementById('viewModal').classList.remove('open');
+});
+document.getElementById('viewModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
+
+// ── JS tooltip ──
+const tooltip = document.getElementById('tooltip');
+document.querySelectorAll('.tooltip-icon[data-tooltip]').forEach(icon => {
+  icon.addEventListener('mouseenter', function(e) {
+    tooltip.textContent = this.dataset.tooltip;
+    tooltip.style.display = 'block';
+    const rect = this.getBoundingClientRect();
+    const tw = 320;
+    let left = rect.left + rect.width / 2 - tw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+    tooltip.style.width = tw + 'px';
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = (rect.top - tooltip.offsetHeight - 12 + window.scrollY) + 'px';
+  });
+  icon.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+});
+</script>
+</body>
+</html>
